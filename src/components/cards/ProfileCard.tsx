@@ -1,12 +1,14 @@
 import { Globe, Github, Linkedin } from "lucide-react";
-import avatarPlaceholder from "@/assets/avatar-placeholder.png";
+import Image from "next/image";
 
 export const ProfileCard = () => {
   return (
     <div className="bg-card border border-border rounded-xl p-6 flex items-start gap-6">
-      <img
-        src={avatarPlaceholder}
+      <Image
+        src="/deid_logo.png"
         alt="Profile"
+        width={112}
+        height={112}
         className="w-28 h-28 rounded-2xl object-cover"
       />
 
