@@ -3,13 +3,26 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { getSessionId } from "@/utils/session.utils";
 
 const Loading = () => {
   const router = useRouter();
 
   useEffect(() => {
+    const sessionId = getSessionId();
+    console.log("Root page - Session ID:", sessionId);
+    console.log("Root page - All cookies:", document.cookie);
+
     const timer = setTimeout(() => {
-      router.push("/login");
+      if (sessionId) {
+        console.log("Root page - Redirecting to profile");
+        // User has session, redirect to profile
+        router.push("/profile");
+      } else {
+        console.log("Root page - Redirecting to login");
+        // No session, redirect to login
+        router.push("/login");
+      }
     }, 1500);
 
     return () => clearTimeout(timer);

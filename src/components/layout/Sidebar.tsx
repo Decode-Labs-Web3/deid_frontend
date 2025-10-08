@@ -2,8 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Fingerprint, Target, Store, Vote, Settings } from "lucide-react";
+import {
+  User,
+  Fingerprint,
+  Target,
+  Store,
+  Vote,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import Image from "next/image";
+import { logout } from "@/utils/session.utils";
 
 const navigationItems = [
   { name: "Profile", path: "/profile", icon: User },
@@ -49,10 +58,17 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 px-4 py-3">
           <Fingerprint className="w-8 h-8 text-primary" />
-          <div className="flex flex-col">
+          <div className="flex flex-col flex-1">
             <span className="text-sm font-semibold">Son Nguyen</span>
             <span className="text-xs text-muted-foreground">@PasonDev</span>
           </div>
+          <button
+            onClick={logout}
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded-lg transition-all"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
