@@ -29,17 +29,38 @@ export interface SocialAccount {
   accountId: string;
 }
 
+export interface Wallet {
+  id: string;
+  address: string;
+  user_id: string;
+  name_service: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+  version: number;
+}
+
+export interface ProfileMetadata {
+  username: string;
+  display_name: string;
+  bio: string;
+  avatar_ipfs_hash: string;
+  primary_wallet: Wallet;
+  wallets: Wallet[];
+  decode_user_id: string;
+}
+
 export interface OnChainProfileData {
   profile: OnChainProfile;
   socialAccounts: SocialAccount[];
   isValidator: boolean;
   validators: string[];
   resolvedUsername: string;
+  profile_metadata: ProfileMetadata | null;
 }
 
 // Contract configuration
 const PROXY_ADDRESS = "0x446cec444D5553641D3d10611Db65192dbcA2826";
-const RPC_URL = process.env.MONAD_TESTNET_RPC_URL; // Monad Testnet RPC
 
 // ABI for the DEiDProfile contract
 const DEID_PROFILE_ABI = [
@@ -209,7 +230,17 @@ export const checkOnChainProfile = async (
 
     // Connect to the network
     console.log("🌐 Connecting to Monad Testnet...");
-    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const rpcUrl = process.env.NEXT_PUBLIC_MONAD_TESTNET_RPC_URL;
+    console.log("🔗 RPC URL:", rpcUrl);
+
+    if (!rpcUrl) {
+      console.error(
+        "❌ NEXT_PUBLIC_MONAD_TESTNET_RPC_URL environment variable is not set!"
+      );
+      return null;
+    }
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
     const contract = new ethers.Contract(
       PROXY_ADDRESS,
       DEID_PROFILE_ABI,
@@ -230,6 +261,163 @@ export const checkOnChainProfile = async (
     }
 
     console.log("✅ Profile found:", profile.username);
+
+    // Step 2: Fetch profile metadata from Pinata using metadataURI
+    console.log("🌐 Fetching profile metadata from Pinata...");
+    let profile_metadata: ProfileMetadata | null = null;
+
+    if (profile.metadataURI && profile.metadataURI !== "") {
+      try {
+        const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
+
+        // Use authenticated Pinata API if credentials are available
+        const pinataAccessToken = process.env.PINATA_ACCESS_TOKEN;
+        const pinataApiSecret = process.env.PINATA_API_SECRET;
+
+        let pinataUrl: string;
+        let headers: Record<string, string> = {};
+
+        if (pinataAccessToken && pinataApiSecret) {
+          // Use authenticated Pinata API
+          pinataUrl = `https://api.pinata.cloud/data/pinList?hashContains=${ipfsHash}`;
+          headers = {
+            Authorization: `Bearer ${pinataAccessToken}`,
+            "Content-Type": "application/json",
+          };
+          console.log("🔐 Using authenticated Pinata API");
+        } else {
+          // Fallback to public gateway
+          pinataUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+          headers = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${pinataAccessToken}`,
+          };
+          console.log("⚠️ Using public Pinata gateway (no auth credentials)");
+        }
+
+        console.log("📡 Pinata URL:", pinataUrl);
+
+        const response = await fetch(pinataUrl, {
+          method: "GET",
+          headers,
+          cache: "no-store",
+          signal: AbortSignal.timeout(10000),
+        });
+
+        if (response.ok) {
+          if (pinataAccessToken && pinataApiSecret) {
+            // Handle authenticated API response
+            const pinataResponse = await response.json();
+            if (pinataResponse.rows && pinataResponse.rows.length > 0) {
+              // Get the actual IPFS content using the gateway
+              const gatewayUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+              const contentResponse = await fetch(gatewayUrl, {
+                method: "GET",
+                headers,
+                cache: "no-store",
+                signal: AbortSignal.timeout(10000),
+              });
+
+              if (contentResponse.ok) {
+                profile_metadata = await contentResponse.json();
+                console.log(
+                  "✅ Profile metadata fetched via authenticated API:",
+                  profile_metadata
+                );
+              } else {
+                console.error(
+                  "❌ Failed to fetch content from gateway:",
+                  contentResponse.status
+                );
+              }
+            } else {
+              console.log("ℹ️ No matching pin found in Pinata");
+            }
+          } else {
+            // Handle public gateway response
+            profile_metadata = await response.json();
+            console.log(
+              "✅ Profile metadata fetched from public gateway:",
+              profile_metadata
+            );
+          }
+        } else {
+          console.error(
+            "❌ Failed to fetch metadata from Pinata:",
+            response.status,
+            response.statusText
+          );
+
+          // Fallback: Try to fetch from backend
+          console.log("🔄 Attempting to fetch metadata from backend...");
+          try {
+            const backendUrl =
+              process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+            const backendApiUrl = `${backendUrl}/api/v1/decode/profile-metadata/${ipfsHash}`;
+
+            const backendResponse = await fetch(backendApiUrl, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              cache: "no-store",
+              signal: AbortSignal.timeout(10000),
+            });
+
+            if (backendResponse.ok) {
+              profile_metadata = await backendResponse.json();
+              console.log(
+                "✅ Profile metadata fetched from backend:",
+                profile_metadata
+              );
+            } else {
+              console.error("❌ Backend also failed:", backendResponse.status);
+            }
+          } catch (backendError) {
+            console.error("❌ Backend fallback failed:", backendError);
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error fetching profile metadata:", error);
+
+        // Fallback: Try to fetch from backend
+        console.log(
+          "🔄 Attempting to fetch metadata from backend after error..."
+        );
+        try {
+          const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
+          const backendUrl =
+            process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+          const backendApiUrl = `${backendUrl}/api/v1/decode/profile-metadata/${ipfsHash}`;
+
+          const backendResponse = await fetch(backendApiUrl, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (backendResponse.ok) {
+            profile_metadata = await backendResponse.json();
+            console.log(
+              "✅ Profile metadata fetched from backend after error:",
+              profile_metadata
+            );
+          } else {
+            console.error(
+              "❌ Backend fallback also failed:",
+              backendResponse.status
+            );
+          }
+        } catch (backendError) {
+          console.error("❌ Backend fallback failed:", backendError);
+        }
+      }
+    } else {
+      console.log("ℹ️ No metadataURI found, skipping metadata fetch");
+    }
 
     // Fetch additional data
     console.log("🔗 Fetching social accounts...");
@@ -268,9 +456,10 @@ export const checkOnChainProfile = async (
       isValidator,
       validators,
       resolvedUsername,
+      profile_metadata,
     };
 
-    console.log("✅ On-chain profile data:", profileData);
+    console.log("✅ Complete on-chain profile data:", profileData);
     return profileData;
   } catch (error) {
     console.error("❌ Error checking on-chain profile:", error);
@@ -280,5 +469,5 @@ export const checkOnChainProfile = async (
 
 // Contract configuration
 // Contract Address: 0x446cec444D5553641D3d10611Db65192dbcA2826
-// RPC URL: https://rpc.monad.xyz (Monad Testnet)
+// RPC URL: https://testnet-rpc.monad.xyz (Monad Testnet)
 // Network: Monad Testnet

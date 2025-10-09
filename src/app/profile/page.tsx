@@ -219,8 +219,21 @@ const Profile = () => {
         <div className="max-w-7xl mx-auto p-8 space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-8">
-              <ProfileCard />
-
+              <ProfileCard
+                username={
+                  onChainData?.profile_metadata?.username ??
+                  profileData?.username
+                }
+                display_name={
+                  onChainData?.profile_metadata?.display_name ??
+                  profileData?.display_name
+                }
+                bio={onChainData?.profile_metadata?.bio ?? profileData?.bio}
+                avatar_ipfs_hash={
+                  onChainData?.profile_metadata?.avatar_ipfs_hash ??
+                  profileData?.avatar_ipfs_hash
+                }
+              />
               <div className="bg-card border border-border rounded-xl p-6 grid grid-cols-3 gap-6">
                 <StatCard
                   title="Task Score"
@@ -266,109 +279,6 @@ const Profile = () => {
               color="#EF4444"
             />
           </div>
-
-          {/* On-Chain Profile Data */}
-          {onChainData && (
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-2xl font-bold mb-6">On-Chain Profile</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">
-                    Profile Information
-                  </h3>
-                  <div className="space-y-2">
-                    <p>
-                      <span className="font-medium">Username:</span>{" "}
-                      {onChainData.profile.username}
-                    </p>
-                    <p>
-                      <span className="font-medium">Metadata URI:</span>{" "}
-                      {onChainData.profile.metadataURI}
-                    </p>
-                    <p>
-                      <span className="font-medium">Created:</span>{" "}
-                      {new Date(
-                        onChainData.profile.createdAt * 1000
-                      ).toLocaleString()}
-                    </p>
-                    <p>
-                      <span className="font-medium">Updated:</span>{" "}
-                      {new Date(
-                        onChainData.profile.lastUpdated * 1000
-                      ).toLocaleString()}
-                    </p>
-                    <p>
-                      <span className="font-medium">Active:</span>{" "}
-                      {onChainData.profile.isActive ? "Yes" : "No"}
-                    </p>
-                    <p>
-                      <span className="font-medium">Is Validator:</span>{" "}
-                      {onChainData.isValidator ? "Yes" : "No"}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">
-                    Social Accounts
-                  </h3>
-                  {onChainData.socialAccounts.length > 0 ? (
-                    <div className="space-y-2">
-                      {onChainData.socialAccounts.map((account, index) => (
-                        <p key={index}>
-                          <span className="font-medium capitalize">
-                            {account.platform}:
-                          </span>{" "}
-                          {account.accountId}
-                        </p>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No social accounts linked
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional On-Chain Data */}
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-3">Wallets</h3>
-                {onChainData.profile.wallets.length > 0 ? (
-                  <div className="space-y-2">
-                    {onChainData.profile.wallets.map((wallet, index) => (
-                      <p key={index} className="font-mono text-sm">
-                        {wallet}
-                      </p>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No wallets linked</p>
-                )}
-              </div>
-
-              {onChainData.validators.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-3">
-                    Validators ({onChainData.validators.length})
-                  </h3>
-                  <div className="space-y-1">
-                    {onChainData.validators
-                      .slice(0, 5)
-                      .map((validator, index) => (
-                        <p key={index} className="font-mono text-sm">
-                          {validator}
-                        </p>
-                      ))}
-                    {onChainData.validators.length > 5 && (
-                      <p className="text-muted-foreground text-sm">
-                        ... and {onChainData.validators.length - 5} more
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           <div>
             <h2 className="text-2xl font-bold mb-6">NFT Collections</h2>
