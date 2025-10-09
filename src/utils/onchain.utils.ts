@@ -262,161 +262,41 @@ export const checkOnChainProfile = async (
 
     console.log("✅ Profile found:", profile.username);
 
-    // Step 2: Fetch profile metadata from Pinata using metadataURI
-    console.log("🌐 Fetching profile metadata from Pinata...");
+    // Step 2: Fetch profile metadata from backend
+    console.log("🌐 Fetching profile metadata from backend...");
     let profile_metadata: ProfileMetadata | null = null;
+    const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
 
-    if (profile.metadataURI && profile.metadataURI !== "") {
-      try {
-        const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
+    try {
+      const backendUrl =
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+      const backendApiUrl = `${backendUrl}/api/v1/decode/profile-metadata/${ipfsHash}`;
 
-        // Use authenticated Pinata API if credentials are available
-        const pinataAccessToken = process.env.PINATA_ACCESS_TOKEN;
-        const pinataApiSecret = process.env.PINATA_API_SECRET;
+      const backendResponse = await fetch(backendApiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(10000),
+      });
 
-        let pinataUrl: string;
-        let headers: Record<string, string> = {};
-
-        if (pinataAccessToken && pinataApiSecret) {
-          // Use authenticated Pinata API
-          pinataUrl = `https://api.pinata.cloud/data/pinList?hashContains=${ipfsHash}`;
-          headers = {
-            Authorization: `Bearer ${pinataAccessToken}`,
-            "Content-Type": "application/json",
-          };
-          console.log("🔐 Using authenticated Pinata API");
-        } else {
-          // Fallback to public gateway
-          pinataUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-          headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${pinataAccessToken}`,
-          };
-          console.log("⚠️ Using public Pinata gateway (no auth credentials)");
-        }
-
-        console.log("📡 Pinata URL:", pinataUrl);
-
-        const response = await fetch(pinataUrl, {
-          method: "GET",
-          headers,
-          cache: "no-store",
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (response.ok) {
-          if (pinataAccessToken && pinataApiSecret) {
-            // Handle authenticated API response
-            const pinataResponse = await response.json();
-            if (pinataResponse.rows && pinataResponse.rows.length > 0) {
-              // Get the actual IPFS content using the gateway
-              const gatewayUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-              const contentResponse = await fetch(gatewayUrl, {
-                method: "GET",
-                headers,
-                cache: "no-store",
-                signal: AbortSignal.timeout(10000),
-              });
-
-              if (contentResponse.ok) {
-                profile_metadata = await contentResponse.json();
-                console.log(
-                  "✅ Profile metadata fetched via authenticated API:",
-                  profile_metadata
-                );
-              } else {
-                console.error(
-                  "❌ Failed to fetch content from gateway:",
-                  contentResponse.status
-                );
-              }
-            } else {
-              console.log("ℹ️ No matching pin found in Pinata");
-            }
-          } else {
-            // Handle public gateway response
-            profile_metadata = await response.json();
-            console.log(
-              "✅ Profile metadata fetched from public gateway:",
-              profile_metadata
-            );
-          }
-        } else {
-          console.error(
-            "❌ Failed to fetch metadata from Pinata:",
-            response.status,
-            response.statusText
+      if (backendResponse.ok) {
+        const responseData = await backendResponse.json();
+        if (responseData.success && responseData.data) {
+          profile_metadata = responseData.data;
+          console.log(
+            "✅ Profile metadata fetched from backend:",
+            profile_metadata
           );
-
-          // Fallback: Try to fetch from backend
-          console.log("🔄 Attempting to fetch metadata from backend...");
-          try {
-            const backendUrl =
-              process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
-            const backendApiUrl = `${backendUrl}/api/v1/decode/profile-metadata/${ipfsHash}`;
-
-            const backendResponse = await fetch(backendApiUrl, {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              cache: "no-store",
-              signal: AbortSignal.timeout(10000),
-            });
-
-            if (backendResponse.ok) {
-              profile_metadata = await backendResponse.json();
-              console.log(
-                "✅ Profile metadata fetched from backend:",
-                profile_metadata
-              );
-            } else {
-              console.error("❌ Backend also failed:", backendResponse.status);
-            }
-          } catch (backendError) {
-            console.error("❌ Backend fallback failed:", backendError);
-          }
+        } else {
+          console.error("❌ Backend response indicates failure:", responseData);
         }
-      } catch (error) {
-        console.error("❌ Error fetching profile metadata:", error);
-
-        // Fallback: Try to fetch from backend
-        console.log(
-          "🔄 Attempting to fetch metadata from backend after error..."
-        );
-        try {
-          const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
-          const backendUrl =
-            process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
-          const backendApiUrl = `${backendUrl}/api/v1/decode/profile-metadata/${ipfsHash}`;
-
-          const backendResponse = await fetch(backendApiUrl, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            cache: "no-store",
-            signal: AbortSignal.timeout(10000),
-          });
-
-          if (backendResponse.ok) {
-            profile_metadata = await backendResponse.json();
-            console.log(
-              "✅ Profile metadata fetched from backend after error:",
-              profile_metadata
-            );
-          } else {
-            console.error(
-              "❌ Backend fallback also failed:",
-              backendResponse.status
-            );
-          }
-        } catch (backendError) {
-          console.error("❌ Backend fallback failed:", backendError);
-        }
+      } else {
+        console.error("❌ Backend request failed:", backendResponse.status);
       }
-    } else {
-      console.log("ℹ️ No metadataURI found, skipping metadata fetch");
+    } catch (error) {
+      console.error("❌ Error fetching profile metadata from backend:", error);
     }
 
     // Fetch additional data

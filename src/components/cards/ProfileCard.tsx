@@ -25,64 +25,23 @@ export const ProfileCard = ({
       try {
         setLoading(true);
 
-        // Use authenticated Pinata API if credentials are available
-        const pinataAccessToken = process.env.NEXT_PUBLIC_PINATA_ACCESS_TOKEN;
-        const pinataApiSecret = process.env.NEXT_PUBLIC_PINATA_API_SECRET;
+        // Use backend proxy to avoid CORS issues
+        console.log("🔐 Using backend proxy for avatar check");
+        const proxyUrl = `/api/pinata/proxy?hash=${avatar_ipfs_hash}&type=avatar`;
 
-        let pinataUrl: string;
-        let headers: Record<string, string> = {};
-
-        if (pinataAccessToken && pinataApiSecret) {
-          // Use authenticated Pinata API to check if pin exists
-          const apiUrl = `https://api.pinata.cloud/data/pinList?hashContains=${avatar_ipfs_hash}`;
-          headers = {
-            Authorization: `Bearer ${pinataAccessToken}`,
-            "Content-Type": "application/json",
-          };
-
-          console.log("🔐 Using authenticated Pinata API for avatar check");
-
-          const apiResponse = await fetch(apiUrl, {
-            method: "GET",
-            headers,
-            signal: AbortSignal.timeout(5000),
-          });
-
-          console.log("🔍 API Response:", apiResponse);
-
-          if (apiResponse.ok) {
-            const pinataResponse = await apiResponse.json();
-            if (pinataResponse.rows && pinataResponse.rows.length > 0) {
-              // Pin exists, use the gateway URL
-              pinataUrl = `https://gateway.pinata.cloud/ipfs/${avatar_ipfs_hash}`;
-              console.log("✅ Avatar pin found via authenticated API");
-            } else {
-              console.log("ℹ️ Avatar pin not found in Pinata");
-              return;
-            }
-          } else {
-            console.log(
-              "⚠️ Failed to check pin via API, falling back to public gateway"
-            );
-            pinataUrl = `https://gateway.pinata.cloud/ipfs/${avatar_ipfs_hash}`;
-          }
-        } else {
-          // Fallback to public gateway
-          pinataUrl = `https://gateway.pinata.cloud/ipfs/${avatar_ipfs_hash}`;
-          console.log(
-            "⚠️ Using public Pinata gateway for avatar (no auth credentials)"
-          );
-        }
-
-        // Test if the image exists
-        const response = await fetch(pinataUrl, {
-          method: "HEAD",
+        const response = await fetch(proxyUrl, {
+          method: "GET",
           signal: AbortSignal.timeout(5000),
         });
 
         if (response.ok) {
-          setAvatarUrl(pinataUrl);
-          console.log("✅ Avatar loaded successfully");
+          const data = await response.json();
+          if (data.avatar_url) {
+            setAvatarUrl(data.avatar_url);
+            console.log("✅ Avatar loaded successfully:", data.avatar_url);
+          } else {
+            console.log("ℹ️ No avatar URL in response, using default");
+          }
         } else {
           console.log("Avatar not found on Pinata, using default");
         }
