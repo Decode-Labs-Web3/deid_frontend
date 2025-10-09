@@ -25,9 +25,9 @@ export const ProfileCard = ({
       try {
         setLoading(true);
 
-        // Fetch avatar directly from IPFS gateway
-        console.log("🌐 Fetching avatar directly from IPFS");
-        const ipfsUrl = `https://ipfs.io/ipfs/${avatar_ipfs_hash}`;
+        // Fetch avatar directly from custom IPFS node
+        console.log("🌐 Fetching avatar directly from custom IPFS node");
+        const ipfsUrl = `http://35.247.142.76:8080/ipfs/${avatar_ipfs_hash}`;
 
         const response = await fetch(ipfsUrl, {
           method: "GET",

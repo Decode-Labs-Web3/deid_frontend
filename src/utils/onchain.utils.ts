@@ -262,41 +262,39 @@ export const checkOnChainProfile = async (
 
     console.log("✅ Profile found:", profile.username);
 
-    // Step 2: Fetch profile metadata from backend
-    console.log("🌐 Fetching profile metadata from backend...");
+    // Step 2: Fetch profile metadata directly from IPFS
+    console.log("🌐 Fetching profile metadata directly from IPFS...");
     let profile_metadata: ProfileMetadata | null = null;
-    const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
 
-    try {
-      const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
-      const backendApiUrl = `${backendUrl}/api/v1/decode/profile-metadata/${ipfsHash}`;
+    if (profile.metadataURI && profile.metadataURI !== "") {
+      try {
+        const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
+        const ipfsUrl = `http://35.247.142.76:8080/ipfs/${ipfsHash}`;
 
-      const backendResponse = await fetch(backendApiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        signal: AbortSignal.timeout(10000),
-      });
+        console.log("🔗 Fetching from IPFS:", ipfsUrl);
+        const ipfsResponse = await fetch(ipfsUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          signal: AbortSignal.timeout(10000),
+        });
 
-      if (backendResponse.ok) {
-        const responseData = await backendResponse.json();
-        if (responseData.success && responseData.data) {
-          profile_metadata = responseData.data;
+        if (ipfsResponse.ok) {
+          profile_metadata = await ipfsResponse.json();
           console.log(
-            "✅ Profile metadata fetched from backend:",
+            "✅ Profile metadata fetched from IPFS:",
             profile_metadata
           );
         } else {
-          console.error("❌ Backend response indicates failure:", responseData);
+          console.error("❌ IPFS request failed:", ipfsResponse.status);
         }
-      } else {
-        console.error("❌ Backend request failed:", backendResponse.status);
+      } catch (error) {
+        console.error("❌ Error fetching profile metadata from IPFS:", error);
       }
-    } catch (error) {
-      console.error("❌ Error fetching profile metadata from backend:", error);
+    } else {
+      console.log("ℹ️ No metadataURI found, skipping metadata fetch");
     }
 
     // Fetch additional data
