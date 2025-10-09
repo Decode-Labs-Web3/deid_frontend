@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const pinataAccessToken = process.env.PINATA_ACCESS_TOKEN;
-    const pinataApiSecret = process.env.PINATA_API_SECRET;
+    const pinataAccessToken = process.env.NEXT_PUBLIC_PINATA_ACCESS_TOKEN;
+    const pinataApiSecret = process.env.NEXT_PUBLIC_PINATA_API_SECRET;
 
     if (!pinataAccessToken || !pinataApiSecret) {
       return NextResponse.json(
@@ -124,4 +124,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

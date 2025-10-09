@@ -19,52 +19,63 @@ export const ProfileCard = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchAvatarFromPinata = async () => {
+    const fetchAvatarFromIPFS = async () => {
       if (!avatar_ipfs_hash) return;
 
       try {
         setLoading(true);
 
-        // Use backend proxy to avoid CORS issues
-        console.log("🔐 Using backend proxy for avatar check");
-        const proxyUrl = `/api/pinata/proxy?hash=${avatar_ipfs_hash}&type=avatar`;
+        // Fetch avatar directly from IPFS gateway
+        console.log("🌐 Fetching avatar directly from IPFS");
+        const ipfsUrl = `https://ipfs.io/ipfs/${avatar_ipfs_hash}`;
 
-        const response = await fetch(proxyUrl, {
+        const response = await fetch(ipfsUrl, {
           method: "GET",
           signal: AbortSignal.timeout(5000),
         });
 
         if (response.ok) {
-          const data = await response.json();
-          if (data.avatar_url) {
-            setAvatarUrl(data.avatar_url);
-            console.log("✅ Avatar loaded successfully:", data.avatar_url);
-          } else {
-            console.log("ℹ️ No avatar URL in response, using default");
-          }
+          setAvatarUrl(ipfsUrl);
+          console.log("✅ Avatar loaded successfully:", ipfsUrl);
         } else {
-          console.log("Avatar not found on Pinata, using default");
+          console.log("Avatar not found on IPFS, using default");
         }
       } catch (error) {
-        console.error("Error fetching avatar from Pinata:", error);
+        console.error("Error fetching avatar from IPFS:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAvatarFromPinata();
+    fetchAvatarFromIPFS();
   }, [avatar_ipfs_hash]);
+
+  // Helper to check if the avatarUrl is an external URL (e.g., IPFS)
+  const isExternalUrl = (url: string) => /^https?:\/\//.test(url);
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 flex items-start gap-6">
       <div className="relative">
-        <Image
-          src={avatarUrl}
-          alt="Profile"
-          width={112}
-          height={112}
-          className="w-28 h-28 rounded-2xl object-cover"
-        />
+        {isExternalUrl(avatarUrl) ? (
+          // Use <img> for external URLs (e.g., IPFS) to avoid next/image config issues
+          <img
+            src={avatarUrl}
+            alt="Profile"
+            width={112}
+            height={112}
+            className="w-28 h-28 rounded-2xl object-cover"
+            style={{ objectFit: "cover" }}
+          />
+        ) : (
+          // Use next/image for local/static images
+          <Image
+            src={avatarUrl}
+            alt="Profile"
+            width={112}
+            height={112}
+            className="w-28 h-28 rounded-2xl object-cover"
+          />
+        )}
         {loading && (
           <div className="absolute inset-0 w-28 h-28 rounded-2xl bg-background/50 flex items-center justify-center">
             <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
