@@ -34,6 +34,7 @@ export default function SSOCallback() {
       }
 
       console.log("SSO Success:", response);
+
       router.push("/profile");
     } catch (err) {
       console.error("SSO Error:", err);

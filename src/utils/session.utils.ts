@@ -25,3 +25,22 @@ export const logout = (): void => {
   // Redirect to login page
   window.location.href = "/login";
 };
+
+export const switchToOtherAccount = (): void => {
+  if (typeof document === "undefined") return;
+
+  // Delete the session cookie
+  document.cookie =
+    "deid_session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+  // Clear session storage
+  sessionStorage.removeItem("primaryWalletAddress");
+
+  // Redirect to login page
+  window.location.href = "/login";
+};
+
+export const getPrimaryWalletAddress = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("primaryWalletAddress");
+};

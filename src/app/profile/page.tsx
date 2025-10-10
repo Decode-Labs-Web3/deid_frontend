@@ -124,12 +124,10 @@ const Profile = () => {
         }
 
         const userData = apiResponse.data;
-        console.log("👤 User Data:", userData);
         setProfileData(userData);
 
         // Check on-chain profile using the primary wallet address
         const walletAddress = userData.primary_wallet?.address;
-        console.log("🔗 Primary Wallet Address:", walletAddress);
 
         if (walletAddress) {
           console.log("🔍 Checking on-chain profile...");
@@ -139,6 +137,8 @@ const Profile = () => {
             console.log(
               "❌ No on-chain profile found, redirecting to create-account"
             );
+            sessionStorage.setItem("primaryWalletAddress", walletAddress);
+            console.log("Primary wallet address stored:", walletAddress);
             router.push("/create-account");
             return;
           }
@@ -146,8 +146,13 @@ const Profile = () => {
           console.log("✅ On-chain profile found:", onChainProfile);
           setOnChainData(onChainProfile);
         } else {
-          console.log("❌ No primary wallet address found");
-          throw new Error("No primary wallet address found");
+          console.log(
+            "❌ No primary wallet address found, please set your primary wallet address in Decode Portal"
+          );
+          setError(
+            "No primary wallet address found. Please set your primary wallet address in Decode Portal."
+          );
+          return;
         }
 
         console.log("✅ Profile data fetch completed successfully");
@@ -190,6 +195,8 @@ const Profile = () => {
   }
 
   if (error) {
+    const isWalletError = error.includes("primary wallet address");
+
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
@@ -199,12 +206,27 @@ const Profile = () => {
               Error loading profile
             </div>
             <p className="text-muted-foreground mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            >
-              Retry
-            </button>
+            <div className="flex gap-3 justify-center">
+              {isWalletError ? (
+                <button
+                  onClick={() =>
+                    window.open(
+                      "https://app.decodenetwork.app/dashboard/wallets",
+                      "_blank"
+                    )
+                  }
+                  className="px-6 py-2 bg-[#CA4A87] text-white rounded-md hover:bg-[#b13e74] transition-colors"
+                >
+                  Go to Decode Wallets
+                </button>
+              ) : null}
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         </div>
       </div>

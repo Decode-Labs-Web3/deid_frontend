@@ -100,12 +100,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // Get profile data to extract primary wallet address
+    const profileData = await profileRes.json();
+    const primaryWalletAddress = profileData?.data?.primary_wallet?.address;
+
     // Clean up SSO state cookie and set session cookie
     const res = NextResponse.json(
       {
         success: true,
         statusCode: 200,
         message: "SSO authentication successful",
+        data: {
+          primaryWalletAddress: primaryWalletAddress || null,
+        },
       },
       { status: 200 }
     );
