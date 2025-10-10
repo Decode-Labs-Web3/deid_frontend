@@ -20,11 +20,13 @@ import {
   getPrimaryWalletAddress,
 } from "@/utils/session.utils";
 
-// Contract configuration - using proxy contract address from working example
-const PROXY_ADDRESS = "0x446cec444D5553641D3d10611Db65192dbcA2826";
+// Contract configuration - using environment variable or fallback
+const PROXY_ADDRESS =
+  process.env.PROXY_ADDRESS || "0x76050bee51946D027B5548d97C6166e08e5a2B1C";
 
 // Import the actual ABI from the contract JSON files
 import DEID_PROFILE_ABI from "@/contract-abi/core/DEiDProfile.sol/DEiDProfile.json";
+import DEID_PROXY_ABI from "@/contract-abi/core/DEiDProxy.sol/DEiDProxy.json";
 
 interface CreateProfileData {
   method: string;
@@ -222,40 +224,112 @@ const CreateAccount = () => {
       console.log("✅ Profile creation data received:", createData);
 
       // Connect to the network
-      console.log("🌐 Connecting to Monad Testnet...");
+      console.log("🌐 Connecting to Ethereum Sepolia...");
 
       if (!walletClient) {
         throw new Error("Wallet client not available");
       }
 
       // Check if wallet client is on the correct chain
-      if (walletClient.chain?.id !== 41434) {
-        console.error("❌ Wallet client is not on Monad Testnet!");
+      if (walletClient.chain?.id !== 11155111) {
+        console.error("❌ Wallet client is not on Ethereum Sepolia!");
         console.error("   Current chain ID:", walletClient.chain?.id);
-        console.error("   Expected chain ID: 41434");
-        throw new Error("Please switch to Monad Testnet in your wallet");
+        console.error("   Expected chain ID: 11155111");
+        throw new Error("Please switch to Ethereum Sepolia in your wallet");
       }
 
       // Create ethers provider from wallet client
       const provider = new ethers.BrowserProvider(walletClient);
       const signer = await provider.getSigner();
 
-      // Connect to contract
-      const contract = new ethers.Contract(
-        PROXY_ADDRESS,
-        DEID_PROFILE_ABI.abi,
-        signer
-      );
+      // Connect to contract using the same pattern as the working script
+      // Try both ABIs to see which one works with the proxy
+      let contract;
+
+      try {
+        // First try with DEiDProfile ABI
+        console.log("🔧 Trying DEiDProfile ABI...");
+        const DEiDProfileFactory = new ethers.ContractFactory(
+          DEID_PROFILE_ABI.abi,
+          DEID_PROFILE_ABI.bytecode,
+          signer
+        );
+        contract = DEiDProfileFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+
+        // Test if this ABI works
+        await contract.getProfile(userWallet);
+        console.log("✅ DEiDProfile ABI works with proxy");
+      } catch {
+        console.log("⚠️ DEiDProfile ABI failed, trying DEiDProxy ABI...");
+
+        // Try with DEiDProxy ABI
+        const DEiDProxyFactory = new ethers.ContractFactory(
+          DEID_PROXY_ABI.abi,
+          DEID_PROXY_ABI.bytecode,
+          signer
+        );
+        contract = DEiDProxyFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+        console.log("✅ Using DEiDProxy ABI");
+      }
 
       console.log("✅ Connected to contract");
 
-      // Check current state
-      const validators = await contract.getValidators();
-      const isValidator = await contract.isValidator(userWallet);
+      // Check if contract is deployed at the proxy address
+      console.log("🔍 Checking contract deployment at:", PROXY_ADDRESS);
+      try {
+        const code = await provider.getCode(PROXY_ADDRESS);
+        if (code === "0x") {
+          console.error("❌ Contract not deployed at proxy address");
+          console.error("   Address:", PROXY_ADDRESS);
+          console.error("   Network: Ethereum Sepolia");
+          console.error(
+            "   This address might be deployed on a different network"
+          );
+          throw new Error(
+            `Contract not deployed at ${PROXY_ADDRESS} on Ethereum Sepolia. ` +
+              `Please check if the contract is deployed on this network or update the contract address.`
+          );
+        }
+        console.log("✅ Contract is deployed, code length:", code.length);
+      } catch (error) {
+        console.error("❌ Contract deployment check failed:", error);
+        throw new Error(
+          `Contract deployment verification failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
 
-      console.log("📊 Current State:");
-      console.log("   Validators:", validators.length);
-      console.log("   Is Validator:", isValidator);
+      // Test basic contract functionality first
+      console.log("🧪 Testing basic contract functionality...");
+
+      try {
+        // Test the most basic method first
+        const testProfile = await contract.getProfile(userWallet);
+        console.log("✅ Basic contract interaction works");
+        console.log("📊 Test profile result:", testProfile);
+      } catch (error) {
+        console.log("❌ Basic contract interaction failed:", error);
+        throw new Error("Contract is not responding properly");
+      }
+
+      // Check current state (skip if methods don't exist)
+      let validators = [];
+      let isValidator = false;
+
+      try {
+        validators = await contract.getValidators();
+        console.log("📊 Validators:", validators.length);
+      } catch (error) {
+        console.log("⚠️ getValidators method not available or failed:", error);
+      }
+
+      try {
+        isValidator = await contract.isValidator(userWallet);
+        console.log("📊 Is Validator:", isValidator);
+      } catch (error) {
+        console.log("⚠️ isValidator method not available or failed:", error);
+      }
 
       // Check existing profile
       try {
@@ -329,7 +403,7 @@ const CreateAccount = () => {
 
         console.log(
           "\n🔗 Explorer Link:",
-          `https://testnet.monadexplorer.com/tx/${tx.hash}`
+          `https://sepolia.etherscan.io/tx/${tx.hash}`
         );
 
         console.log("\n🎉 SUCCESS! Profile created and verified!");
@@ -357,6 +431,10 @@ const CreateAccount = () => {
       } else if (errorMessage.includes("not a validator")) {
         setErrorMessage(
           "User is not a validator. Only validators can create profiles."
+        );
+      } else if (errorMessage.includes("Contract not deployed")) {
+        setErrorMessage(
+          "Contract not deployed on this network. Please check the contract address or deploy the contract to Ethereum Sepolia."
         );
       } else {
         setErrorMessage(errorMessage || "Error creating profile");

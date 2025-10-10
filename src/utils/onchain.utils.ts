@@ -1,5 +1,7 @@
 // On-chain profile utilities
 import { ethers } from "ethers";
+import DEID_PROFILE_ABI from "@/contract-abi/core/DEiDProfile.sol/DEiDProfile.json";
+import DEID_PROXY_ABI from "@/contract-abi/core/DEiDProxy.sol/DEiDProxy.json";
 
 // Extend Window interface to include ethereum
 declare global {
@@ -59,162 +61,11 @@ export interface OnChainProfileData {
   profile_metadata: ProfileMetadata | null;
 }
 
-// Contract configuration - using proxy contract address from working example
-const PROXY_ADDRESS = "0x446cec444D5553641D3d10611Db65192dbcA2826";
+// Contract configuration - using environment variable or fallback
+const PROXY_ADDRESS =
+  process.env.PROXY_ADDRESS || "0x76050bee51946D027B5548d97C6166e08e5a2B1C";
 
-// ABI for the DEiDProfile contract
-const DEID_PROFILE_ABI = [
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "owner",
-        type: "address",
-      },
-    ],
-    name: "getProfile",
-    outputs: [
-      {
-        components: [
-          {
-            internalType: "string",
-            name: "username",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "metadataURI",
-            type: "string",
-          },
-          {
-            internalType: "address[]",
-            name: "wallets",
-            type: "address[]",
-          },
-          {
-            internalType: "string[]",
-            name: "socialAccounts",
-            type: "string[]",
-          },
-          {
-            internalType: "uint256",
-            name: "createdAt",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "lastUpdated",
-            type: "uint256",
-          },
-          {
-            internalType: "bool",
-            name: "isActive",
-            type: "bool",
-          },
-        ],
-        internalType: "struct DEiDProfileLibrary.Profile",
-        name: "",
-        type: "tuple",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "owner",
-        type: "address",
-      },
-    ],
-    name: "getSocialAccounts",
-    outputs: [
-      {
-        internalType: "string[]",
-        name: "platforms",
-        type: "string[]",
-      },
-      {
-        internalType: "string[]",
-        name: "accountIds",
-        type: "string[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getValidators",
-    outputs: [
-      {
-        internalType: "address[]",
-        name: "",
-        type: "address[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "validator",
-        type: "address",
-      },
-    ],
-    name: "isValidator",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "addr",
-        type: "address",
-      },
-    ],
-    name: "resolveAddress",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "username",
-        type: "string",
-      },
-    ],
-    name: "resolveUsername",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-];
+// Using imported ABI from contract JSON files
 
 export const checkOnChainProfile = async (
   walletAddress: string
@@ -229,23 +80,43 @@ export const checkOnChainProfile = async (
     }
 
     // Connect to the network
-    console.log("🌐 Connecting to Monad Testnet...");
-    const rpcUrl = process.env.NEXT_PUBLIC_MONAD_TESTNET_RPC_URL;
+    console.log("🌐 Connecting to Ethereum Sepolia...");
+    const rpcUrl =
+      process.env.NEXT_PUBLIC_TESTNET_RPC_URL ||
+      "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
     console.log("🔗 RPC URL:", rpcUrl);
 
-    if (!rpcUrl) {
-      console.error(
-        "❌ NEXT_PUBLIC_MONAD_TESTNET_RPC_URL environment variable is not set!"
-      );
-      return null;
-    }
-
     const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const contract = new ethers.Contract(
-      PROXY_ADDRESS,
-      DEID_PROFILE_ABI,
-      provider
-    );
+
+    // Connect to contract using the same pattern as the create-account page
+    // Try both ABIs to see which one works with the proxy
+    let contract;
+
+    try {
+      // First try with DEiDProfile ABI
+      console.log("🔧 Trying DEiDProfile ABI...");
+      const DEiDProfileFactory = new ethers.ContractFactory(
+        DEID_PROFILE_ABI.abi,
+        DEID_PROFILE_ABI.bytecode,
+        provider
+      );
+      contract = DEiDProfileFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+
+      // Test if this ABI works
+      await contract.getProfile(walletAddress);
+      console.log("✅ DEiDProfile ABI works with proxy");
+    } catch {
+      console.log("⚠️ DEiDProfile ABI failed, trying DEiDProxy ABI...");
+
+      // Try with DEiDProxy ABI
+      const DEiDProxyFactory = new ethers.ContractFactory(
+        DEID_PROXY_ABI.abi,
+        DEID_PROXY_ABI.bytecode,
+        provider
+      );
+      contract = DEiDProxyFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+      console.log("✅ Using DEiDProxy ABI");
+    }
 
     console.log("✅ Connected to contract at:", PROXY_ADDRESS);
 
@@ -297,20 +168,43 @@ export const checkOnChainProfile = async (
       console.log("ℹ️ No metadataURI found, skipping metadata fetch");
     }
 
-    // Fetch additional data
-    console.log("🔗 Fetching social accounts...");
-    const [platforms, accountIds] = await contract.getSocialAccounts(
-      walletAddress
-    );
+    // Fetch additional data (with error handling)
+    let platforms = [];
+    let accountIds = [];
+    let isValidator = false;
+    let validators = [];
+    let resolvedUsername = "";
 
-    console.log("👥 Checking validator status...");
-    const isValidator = await contract.isValidator(walletAddress);
+    try {
+      console.log("🔗 Fetching social accounts...");
+      [platforms, accountIds] = await contract.getSocialAccounts(walletAddress);
+    } catch (error) {
+      console.log(
+        "⚠️ getSocialAccounts method not available or failed:",
+        error
+      );
+    }
 
-    console.log("📋 Fetching validators list...");
-    const validators = await contract.getValidators();
+    try {
+      console.log("👥 Checking validator status...");
+      isValidator = await contract.isValidator(walletAddress);
+    } catch (error) {
+      console.log("⚠️ isValidator method not available or failed:", error);
+    }
 
-    console.log("🔍 Resolving address to username...");
-    const resolvedUsername = await contract.resolveAddress(walletAddress);
+    try {
+      console.log("📋 Fetching validators list...");
+      validators = await contract.getValidators();
+    } catch (error) {
+      console.log("⚠️ getValidators method not available or failed:", error);
+    }
+
+    try {
+      console.log("🔍 Resolving address to username...");
+      resolvedUsername = await contract.resolveAddress(walletAddress);
+    } catch (error) {
+      console.log("⚠️ resolveAddress method not available or failed:", error);
+    }
 
     // Format social accounts
     const socialAccounts: SocialAccount[] = platforms.map(
@@ -347,5 +241,5 @@ export const checkOnChainProfile = async (
 
 // Contract configuration
 // Contract Address: 0x446cec444D5553641D3d10611Db65192dbcA2826
-// RPC URL: https://testnet-rpc.monad.xyz (Monad Testnet)
-// Network: Monad Testnet
+// RPC URL: https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161 (Ethereum Sepolia)
+// Network: Ethereum Sepolia

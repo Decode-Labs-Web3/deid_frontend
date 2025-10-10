@@ -2,47 +2,40 @@
 
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import {
-  mainnet,
-  polygon,
-  optimism,
-  arbitrum,
-  base,
-  sepolia,
-} from "wagmi/chains";
+import { mainnet, polygon, optimism, arbitrum, base } from "wagmi/chains";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { http } from "viem";
 import { defineChain } from "viem";
 import { useEffect } from "react";
 import { useAccount, useSwitchChain } from "wagmi";
 
-// Define Monad Testnet chain
-const monadTestnet = defineChain({
-  id: 41434, // Monad Testnet chain ID
-  name: "Monad Testnet",
+// Define custom Sepolia chain using existing env variables
+const customSepolia = defineChain({
+  id: 11155111, // Ethereum Sepolia chain ID
+  name: "Ethereum Sepolia",
   nativeCurrency: {
     decimals: 18,
-    name: "Monad",
-    symbol: "MON",
+    name: "Ethereum",
+    symbol: "ETH",
   },
   rpcUrls: {
     default: {
       http: [
-        process.env.NEXT_PUBLIC_MONAD_TESTNET_RPC_URL ||
-          "https://testnet-rpc.monad.xyz",
+        process.env.NEXT_PUBLIC_TESTNET_RPC_URL ||
+          "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
       ],
     },
     public: {
       http: [
-        "https://testnet-rpc.monad.xyz",
-        "https://monad-testnet.rpc.thirdweb.com",
+        "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+        "https://rpc.sepolia.org",
       ],
     },
   },
   blockExplorers: {
     default: {
-      name: "Monad Explorer",
-      url: "https://testnet-explorer.monad.xyz",
+      name: "Etherscan",
+      url: "https://sepolia.etherscan.io",
     },
   },
   testnet: true,
@@ -58,28 +51,19 @@ function getConfig() {
       appName: "DEiD Frontend",
       projectId:
         process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "your-project-id",
-      chains: [
-        monadTestnet,
-        mainnet,
-        polygon,
-        optimism,
-        arbitrum,
-        base,
-        sepolia,
-      ],
+      chains: [customSepolia, mainnet, polygon, optimism, arbitrum, base],
       transports: {
-        [monadTestnet.id]: http(
-          process.env.NEXT_PUBLIC_MONAD_TESTNET_RPC_URL ||
-            "https://testnet-rpc.monad.xyz"
+        [customSepolia.id]: http(
+          process.env.NEXT_PUBLIC_TESTNET_RPC_URL ||
+            "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
         ),
         [mainnet.id]: http(),
         [polygon.id]: http(),
         [optimism.id]: http(),
         [arbitrum.id]: http(),
         [base.id]: http(),
-        [sepolia.id]: http(),
       },
-      // Set Monad Testnet as the default chain
+      // Set custom Sepolia as the default chain
       ssr: true,
     });
   }
@@ -93,18 +77,18 @@ function getQueryClient() {
   return queryClient;
 }
 
-// Component to automatically switch to Monad Testnet when wallet connects
-function AutoSwitchToMonad() {
+// Component to automatically switch to Sepolia when wallet connects
+function AutoSwitchToSepolia() {
   const { isConnected, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
 
   useEffect(() => {
-    if (isConnected && chainId !== monadTestnet.id) {
-      console.log("🔄 Auto-switching to Monad Testnet...");
+    if (isConnected && chainId !== customSepolia.id) {
+      console.log("🔄 Auto-switching to Sepolia...");
       try {
-        switchChain({ chainId: monadTestnet.id });
+        switchChain({ chainId: customSepolia.id });
       } catch (error) {
-        console.warn("Failed to auto-switch to Monad Testnet:", error);
+        console.warn("Failed to auto-switch to Sepolia:", error);
       }
     }
   }, [isConnected, chainId, switchChain]);
@@ -120,7 +104,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClientInstance}>
         <RainbowKitProvider>
-          <AutoSwitchToMonad />
+          <AutoSwitchToSepolia />
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
