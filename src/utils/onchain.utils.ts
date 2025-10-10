@@ -59,7 +59,7 @@ export interface OnChainProfileData {
   profile_metadata: ProfileMetadata | null;
 }
 
-// Contract configuration
+// Contract configuration - using proxy contract address from working example
 const PROXY_ADDRESS = "0x446cec444D5553641D3d10611Db65192dbcA2826";
 
 // ABI for the DEiDProfile contract

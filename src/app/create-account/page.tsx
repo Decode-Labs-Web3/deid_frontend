@@ -20,10 +20,8 @@ import {
   getPrimaryWalletAddress,
 } from "@/utils/session.utils";
 
-// Contract configuration
-const PROXY_ADDRESS =
-  process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-  "0x446cec444D5553641D3d10611Db65192dbcA2826";
+// Contract configuration - using proxy contract address from working example
+const PROXY_ADDRESS = "0x446cec444D5553641D3d10611Db65192dbcA2826";
 
 // Import the actual ABI from the contract JSON files
 import DEID_PROFILE_ABI from "@/contract-abi/core/DEiDProfile.sol/DEiDProfile.json";
@@ -192,9 +190,10 @@ const CreateAccount = () => {
       }
 
       const userWallet = address;
-      console.log("✅ Using connected primary wallet:", userWallet);
+      console.log("👤 User Wallet:", userWallet);
+      console.log("🔗 Contract:", PROXY_ADDRESS);
 
-      // Fetch calldata from backend
+      // Fetch profile creation data from backend
       console.log("📡 Fetching profile creation data...");
       const backendUrl =
         process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
@@ -208,7 +207,7 @@ const CreateAccount = () => {
         cache: "no-store",
         signal: AbortSignal.timeout(10000),
       });
-      console.log("🔐 Profile creation data fetched from backend:", response);
+
       if (!response.ok) {
         throw new Error("Failed to fetch profile creation data");
       }
@@ -229,13 +228,6 @@ const CreateAccount = () => {
         throw new Error("Wallet client not available");
       }
 
-      // Check wallet client chain
-      console.log("🔗 Wallet Client Chain:", {
-        id: walletClient.chain?.id,
-        name: walletClient.chain?.name,
-        expectedId: 41434,
-      });
-
       // Check if wallet client is on the correct chain
       if (walletClient.chain?.id !== 41434) {
         console.error("❌ Wallet client is not on Monad Testnet!");
@@ -248,163 +240,62 @@ const CreateAccount = () => {
       const provider = new ethers.BrowserProvider(walletClient);
       const signer = await provider.getSigner();
 
-      // Debug network and account info
-      const network = await provider.getNetwork();
-      const nonce = await provider.getTransactionCount(userWallet);
-      const balance = await provider.getBalance(userWallet);
-      const blockNumber = await provider.getBlockNumber();
-
-      console.log("🌐 Network Info:", {
-        chainId: network.chainId.toString(),
-        name: network.name,
-        expectedChainId: "41434",
-        blockNumber: blockNumber,
-      });
-
-      console.log("👤 Account Info:", {
-        address: userWallet,
-        nonce: nonce,
-        balance: ethers.formatEther(balance),
-        balanceWei: balance.toString(),
-      });
-
-      // Check if we're on the correct network
-      if (network.chainId.toString() !== "41434") {
-        throw new Error(
-          `Wrong network! Expected Monad Testnet (41434), but connected to ${network.name} (${network.chainId})`
-        );
-      }
-
-      // Check if we have sufficient balance
-      if (balance < ethers.parseEther("0.01")) {
-        throw new Error(
-          "Insufficient balance for gas fees. Please get MON tokens from the faucet."
-        );
-      }
-
-      // Additional debugging for network issues
-      console.log("🔍 Network Debug Info:", {
-        rpcUrl:
-          process.env.NEXT_PUBLIC_MONAD_TESTNET_RPC_URL ||
-          "https://testnet-rpc.monad.xyz",
-        blockNumber: blockNumber,
-        networkName: network.name,
-        chainId: network.chainId.toString(),
-        isCorrectNetwork: network.chainId.toString() === "41434",
-      });
+      // Connect to contract
       const contract = new ethers.Contract(
         PROXY_ADDRESS,
         DEID_PROFILE_ABI.abi,
         signer
       );
 
-      console.log("✅ Connected to contract at:", PROXY_ADDRESS);
+      console.log("✅ Connected to contract");
 
-      // Check if contract is deployed
+      // Check current state
+      const validators = await contract.getValidators();
+      const isValidator = await contract.isValidator(userWallet);
+
+      console.log("📊 Current State:");
+      console.log("   Validators:", validators.length);
+      console.log("   Is Validator:", isValidator);
+
+      // Check existing profile
       try {
-        const code = await provider.getCode(PROXY_ADDRESS);
-        if (code === "0x") {
-          throw new Error("Contract not deployed at the specified address");
+        const existingProfile = await contract.getProfile(userWallet);
+        if (existingProfile.username !== "") {
+          console.log("   Existing Profile:", existingProfile.username);
+          console.log(
+            "💡 User already has a profile. Use updateProfile instead."
+          );
+          throw new Error(
+            "User already has a profile. Use updateProfile instead."
+          );
         }
-        console.log("✅ Contract is deployed, code length:", code.length);
-      } catch (error) {
-        console.error("❌ Contract deployment check failed:", error);
-        throw new Error("Contract deployment verification failed");
+      } catch {
+        console.log("   No existing profile");
       }
 
-      // Create profile
-      console.log("✍️ Creating profile...");
-      console.log("   Username:", createData.params.username);
-      console.log("   Metadata URI:", createData.ipfs_hash);
-      console.log(
-        "   Signature:",
-        createData.validator.signature.substring(0, 20) + "..."
-      );
-
+      // Prepare profile data
+      const username = createData.params.username;
+      const metadataURI = createData.params.metadataURI;
       const signature = createData.validator.signature.startsWith("0x")
         ? createData.validator.signature
         : `0x${createData.validator.signature}`;
 
-      // Simulate the contract call using ethers.js
-      console.log("🧪 Simulating contract call with ethers.js...");
-      try {
-        const simulationResult = await contract.createProfile.staticCall(
-          createData.params.username,
-          createData.params.metadataURI,
-          signature
-        );
-        console.log("✅ Contract simulation successful:", simulationResult);
-      } catch (simulationError) {
-        console.error("❌ Contract simulation failed:", simulationError);
-        console.error("   This indicates the transaction will fail!");
-        console.error("   Possible causes:");
-        console.error("   1. Invalid signature");
-        console.error("   2. Username already taken");
-        console.error("   3. Contract validation failed");
-        console.error("   4. Insufficient permissions");
-        throw new Error(
-          `Contract simulation failed: ${
-            simulationError instanceof Error
-              ? simulationError.message
-              : String(simulationError)
-          }`
-        );
-      }
+      console.log("\n📝 Profile Data:");
+      console.log("   Username:", username);
+      console.log("   Metadata URI:", metadataURI);
+      console.log("   Signature:", signature);
 
-      // Get current nonce
-      const currentNonce = await provider.getTransactionCount(
-        userWallet,
-        "pending"
-      );
-      console.log("📊 Transaction nonce:", currentNonce);
+      // Create profile
+      console.log("\n✍️  Creating profile...");
 
-      // Estimate gas for the transaction
-      let gasEstimate;
-      try {
-        console.log("⛽ Attempting gas estimation...");
-        gasEstimate = await contract.createProfile.estimateGas(
-          createData.params.username,
-          createData.params.metadataURI,
-          signature
-        );
-        console.log("⛽ Gas estimate successful:", gasEstimate.toString());
-
-        // Ensure minimum gas limit
-        if (gasEstimate < BigInt(300000)) {
-          console.log(
-            "⚠️ Gas estimate too low, using minimum:",
-            gasEstimate.toString()
-          );
-          gasEstimate = BigInt(300000);
-        }
-      } catch (error) {
-        console.log("⚠️ Gas estimation failed:", error);
-        console.log("   Using conservative default gas limit...");
-        gasEstimate = BigInt(500000);
-      }
-
-      const finalGasLimit = gasEstimate + BigInt(100000);
-      console.log("🚀 Sending transaction with parameters:", {
-        username: createData.params.username,
-        metadataURI: createData.params.metadataURI,
-        signature: signature.substring(0, 20) + "...",
-        nonce: currentNonce,
-        gasEstimate: gasEstimate.toString(),
-        finalGasLimit: finalGasLimit.toString(),
-        maxFeePerGas: "20 gwei",
-        maxPriorityFeePerGas: "1 gwei",
-      });
-
-      // Execute tx
       const tx = await contract.createProfile(
-        createData.params.username,
-        createData.params.metadataURI,
+        username,
+        metadataURI,
         signature,
         {
-          nonce: currentNonce,
-          gasLimit: finalGasLimit,
-          maxFeePerGas: ethers.parseUnits("20", "gwei"),
-          maxPriorityFeePerGas: ethers.parseUnits("1", "gwei"),
+          gasLimit: 500000,
+          maxFeePerGas: ethers.parseUnits("100", "gwei"),
+          maxPriorityFeePerGas: ethers.parseUnits("2", "gwei"),
         }
       );
 
@@ -420,13 +311,28 @@ const CreateAccount = () => {
 
         // Verify profile
         const newProfile = await contract.getProfile(userWallet);
-        console.log("✅ Profile verified:");
+        console.log("\n✅ Profile verified:");
         console.log("   Username:", newProfile.username);
         console.log("   Metadata URI:", newProfile.metadataURI);
         console.log(
           "   Created At:",
           new Date(Number(newProfile.createdAt) * 1000).toISOString()
         );
+
+        // Test username resolution
+        const resolvedAddress = await contract.resolveUsername(username);
+        console.log("   Username resolves to:", resolvedAddress);
+        console.log(
+          "   Matches user wallet:",
+          resolvedAddress.toLowerCase() === userWallet.toLowerCase()
+        );
+
+        console.log(
+          "\n🔗 Explorer Link:",
+          `https://testnet.monadexplorer.com/tx/${tx.hash}`
+        );
+
+        console.log("\n🎉 SUCCESS! Profile created and verified!");
 
         setStatus("success");
 
@@ -437,10 +343,26 @@ const CreateAccount = () => {
       } else {
         throw new Error("Transaction failed");
       }
-    } catch (error) {
-      console.error("❌ Error creating profile:", error);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("❌ Error:", errorMessage);
+
+      if (errorMessage.includes("Username already taken")) {
+        setErrorMessage("Username is already taken. Try a different username.");
+      } else if (errorMessage.includes("already has a profile")) {
+        setErrorMessage(
+          "User already has a profile. Use updateProfile instead."
+        );
+      } else if (errorMessage.includes("not a validator")) {
+        setErrorMessage(
+          "User is not a validator. Only validators can create profiles."
+        );
+      } else {
+        setErrorMessage(errorMessage || "Error creating profile");
+      }
+
       setStatus("error");
-      setErrorMessage("Error creating profile");
     } finally {
       setIsCreating(false);
     }
