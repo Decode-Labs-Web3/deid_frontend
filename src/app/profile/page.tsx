@@ -50,6 +50,20 @@ interface ProfileData {
   __v: number;
 }
 
+interface NFTData {
+  token_address: string;
+  token_id: string;
+  name: string;
+  description?: string;
+  image?: string;
+  contract_type: string;
+  symbol?: string;
+  attributes?: Array<{
+    trait_type: string;
+    value: string | number;
+  }>;
+}
+
 interface ApiResponse {
   success: boolean;
   statusCode: number;
@@ -63,9 +77,48 @@ const Profile = () => {
   const [onChainData, setOnChainData] = useState<OnChainProfileData | null>(
     null
   );
+  const [nftData, setNftData] = useState<NFTData[]>([]);
+  const [nftChain, setNftChain] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [nftLoading, setNftLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Function to fetch NFTs
+  const fetchNFTs = async (walletAddress: string) => {
+    try {
+      setNftLoading(true);
+      console.log("🖼️ Fetching NFTs for wallet:", walletAddress);
+
+      const response = await fetch(`/api/nft?wallet=${walletAddress}`);
+      console.log("🔍 NFT response:", response);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch NFTs: ${response.statusText}`);
+      }
+
+      const nftResponse = await response.json();
+
+      if (nftResponse.success) {
+        setNftData(nftResponse.data);
+        setNftChain(nftResponse.chain || "");
+        console.log(
+          `✅ Fetched ${nftResponse.data.length} NFTs from ${
+            nftResponse.chain || "unknown chain"
+          }`
+        );
+      } else {
+        console.log("⚠️ No NFTs found or error:", nftResponse.error);
+        setNftData([]);
+        setNftChain("");
+      }
+    } catch (error) {
+      console.error("❌ Error fetching NFTs:", error);
+      setNftData([]);
+    } finally {
+      setNftLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -153,6 +206,11 @@ const Profile = () => {
             "No primary wallet address found. Please set your primary wallet address in Decode Portal."
           );
           return;
+        }
+
+        // Fetch NFTs for the primary wallet
+        if (walletAddress) {
+          await fetchNFTs(walletAddress);
         }
 
         console.log("✅ Profile data fetch completed successfully");
@@ -303,13 +361,68 @@ const Profile = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold mb-6">NFT Collections</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <NFTCard />
-              <NFTCard />
-              <NFTCard />
-              <NFTCard />
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">NFT Collections</h2>
+              {nftData.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  <span>
+                    {nftData.length} NFT{nftData.length !== 1 ? "s" : ""}
+                  </span>
+                  {nftChain && (
+                    <span className="ml-2 px-2 py-1 bg-muted rounded text-xs">
+                      {nftChain.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
+
+            {nftLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading NFTs...</p>
+                </div>
+              </div>
+            ) : nftData.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {nftData.map((nft) => (
+                  <NFTCard
+                    key={`${nft.token_address}-${nft.token_id}`}
+                    token_address={nft.token_address}
+                    token_id={nft.token_id}
+                    name={nft.name}
+                    description={nft.description}
+                    image={nft.image}
+                    contract_type={nft.contract_type}
+                    symbol={nft.symbol}
+                    attributes={nft.attributes}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-muted-foreground mb-4">
+                  <svg
+                    className="w-16 h-16 mx-auto mb-4 opacity-50"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <p className="text-lg font-medium">No NFTs found</p>
+                  <p className="text-sm text-muted-foreground">
+                    This wallet doesn&apos;t have any NFTs on Sepolia network
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
