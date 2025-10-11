@@ -1,4 +1,4 @@
-import { Globe, Github, Linkedin } from "lucide-react";
+// import { Globe, Github, Linkedin } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 
@@ -7,6 +7,7 @@ interface ProfileCardProps {
   display_name?: string;
   bio?: string;
   avatar_ipfs_hash?: string;
+  primary_wallet_address?: string;
 }
 
 export const ProfileCard = ({
@@ -14,6 +15,7 @@ export const ProfileCard = ({
   display_name,
   bio,
   avatar_ipfs_hash,
+  primary_wallet_address,
 }: ProfileCardProps) => {
   const [avatarUrl, setAvatarUrl] = useState<string>("/deid_logo.png");
   const [loading, setLoading] = useState(false);
@@ -53,6 +55,12 @@ export const ProfileCard = ({
   // Helper to check if the avatarUrl is an external URL (e.g., IPFS)
   const isExternalUrl = (url: string) => /^https?:\/\//.test(url);
 
+  // Helper to format wallet address (first 6 and last 6 characters)
+  const formatWalletAddress = (address: string) => {
+    if (!address || address.length < 12) return address;
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+  };
+
   return (
     <div className="bg-card border border-border rounded-xl p-6 flex items-start gap-6">
       <div className="relative">
@@ -85,17 +93,19 @@ export const ProfileCard = ({
 
       <div className="flex-1">
         <h2 className="text-3xl font-bold mb-1">{display_name || "User"}</h2>
-        <p className="text-muted-foreground mb-3">@{username || "username"}</p>
-
-        <div className="flex gap-3 mb-4">
-          <Globe className="w-5 h-5 text-muted-foreground hover:text-primary cursor-pointer transition" />
-          <Github className="w-5 h-5 text-muted-foreground hover:text-primary cursor-pointer transition" />
-          <Linkedin className="w-5 h-5 text-muted-foreground hover:text-primary cursor-pointer transition" />
-        </div>
+        <p className="text-muted-foreground mb-2">@{username || "username"}</p>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
           {bio || "No bio available"}
         </p>
+
+        {primary_wallet_address && (
+          <div className="mb-3 mt-4">
+            <span className="text-sm font-mono bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded">
+              {formatWalletAddress(primary_wallet_address)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,10 +1,6 @@
 export const TrustWheel = () => {
   return (
     <div className="bg-gradient-to-br from-orange-400/80 via-pink-400/80 via-purple-500/80 to-blue-600/80 rounded-2xl p-8 relative overflow-hidden">
-      <div className="absolute top-4 right-4 bg-primary/90 px-4 py-1 rounded-full">
-        <span className="text-sm font-semibold">streak</span>
-      </div>
-
       <div className="flex items-center justify-between mb-8">
         <span className="text-sm font-medium opacity-90">Task Point 32</span>
         <span className="text-sm font-medium opacity-90">
