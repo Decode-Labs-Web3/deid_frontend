@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Trophy, Target } from "lucide-react";
 import STREAK_TRACKER_ABI from "@/contracts/social/StreakTracker.sol/StreakTracker.json";
 
-const STREAK_TRACKER_ADDRESS = "0x294eEed0B2afF16b7b728b8A318c4471AeAb6542";
+const STREAK_TRACKER_ADDRESS = process.env.NEXT_PUBLIC_STREAK_TRACKER_ADDRESS;
 
 interface UserStreak {
   lastCheckInDay: number;
