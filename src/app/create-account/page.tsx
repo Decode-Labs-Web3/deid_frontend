@@ -8,6 +8,8 @@ import {
   AlertCircle,
   Wallet,
   Users,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { usePageTransition } from "@/hooks/use-page-transition";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -25,8 +27,8 @@ const PROXY_ADDRESS =
   process.env.PROXY_ADDRESS || "0x76050bee51946D027B5548d97C6166e08e5a2B1C";
 
 // Import the actual ABI from the contract JSON files
-import DEID_PROFILE_ABI from "@/contract-abi/core/DEiDProfile.sol/DEiDProfile.json";
-import DEID_PROXY_ABI from "@/contract-abi/core/DEiDProxy.sol/DEiDProxy.json";
+import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
+import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
 
 interface CreateProfileData {
   method: string;
@@ -80,10 +82,17 @@ const CreateAccount = () => {
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [isPrimaryWallet, setIsPrimaryWallet] = useState<boolean | null>(null);
+  const [primaryWalletHint, setPrimaryWalletHint] = useState<string>("");
   const hasDisconnectedOnMount = useRef(false);
 
+  // Helper function to format wallet address (first 6 and last 6 characters)
+  const formatWalletAddress = (address: string) => {
+    if (!address || address.length < 12) return address;
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+  };
+
   // Check if connected wallet is primary using session storage
-  const checkPrimaryWallet = async (walletAddress: string) => {
+  const checkPrimaryWallet = useCallback(async (walletAddress: string) => {
     try {
       setIsCheckingWallet(true);
       setStatus("wallet-check");
@@ -101,12 +110,21 @@ const CreateAccount = () => {
       if (!primaryWalletAddress) {
         console.log("❌ No primary wallet address found in session storage");
         setIsPrimaryWallet(false);
+        setPrimaryWalletHint("");
         setStatus("error");
         setErrorMessage(
           "No primary wallet found. Please log in again to set your primary wallet."
         );
         return false;
       }
+
+      // Set the primary wallet hint for display
+      const formattedAddress = formatWalletAddress(primaryWalletAddress);
+      console.log(
+        "🔍 Setting primary wallet hint in checkPrimaryWallet:",
+        formattedAddress
+      );
+      setPrimaryWalletHint(formattedAddress);
 
       // Compare addresses (case-insensitive)
       const isPrimary =
@@ -137,7 +155,7 @@ const CreateAccount = () => {
     } finally {
       setIsCheckingWallet(false);
     }
-  };
+  }, []);
 
   // Handle wallet connection change
   const handleWalletConnection = useCallback(async () => {
@@ -149,10 +167,11 @@ const CreateAccount = () => {
       }
     } else {
       setIsPrimaryWallet(null);
+      setPrimaryWalletHint("");
       setStatus("idle");
       setErrorMessage("");
     }
-  }, [isConnected, address, disconnect]);
+  }, [isConnected, address, disconnect, checkPrimaryWallet]);
 
   // Disconnect all wallets when component mounts (only once)
   useEffect(() => {
@@ -170,6 +189,22 @@ const CreateAccount = () => {
       hasDisconnectedOnMount.current = true;
     }
   }, [isConnected, disconnect]);
+
+  // Load primary wallet hint on component mount
+  useEffect(() => {
+    const primaryWalletAddress = getPrimaryWalletAddress();
+    console.log(
+      "🔍 Primary wallet address from sessionStorage:",
+      primaryWalletAddress
+    );
+    if (primaryWalletAddress) {
+      const formattedAddress = formatWalletAddress(primaryWalletAddress);
+      console.log("✅ Setting primary wallet hint:", formattedAddress);
+      setPrimaryWalletHint(formattedAddress);
+    } else {
+      console.log("❌ No primary wallet address found in sessionStorage");
+    }
+  }, []);
 
   // Check wallet when address changes
   useEffect(() => {
@@ -447,99 +482,192 @@ const CreateAccount = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
       <div
-        className={`flex flex-col items-center gap-12 max-w-4xl text-center transition-all duration-700 ease-in-out ${
+        className={`w-full max-w-2xl transition-all duration-700 ease-in-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
         }`}
       >
-        <div className="space-y-6">
-          <p className="text-xl md:text-2xl font-semibold leading-relaxed">
-            DEID TRANSFORMS YOUR DECODE DATA INTO A VERIFIABLE ON-CHAIN
-            IDENTITY.
-          </p>
-          <p className="text-xl md:text-2xl font-semibold leading-relaxed">
-            CONNECT YOUR DECODE PRIMARY WALLET TO MINT YOUR FIRST DECENTRALIZED
-            IDENTITY
-          </p>
-        </div>
-
-        {/* Wallet Connection Section */}
-        <div className="flex flex-col items-center gap-6">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">
-              Step 1: Connect Your Primary Wallet
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              Connect your primary wallet to create your DEiD profile
-            </p>
-            <ConnectButton />
-
-            {/* Switch Account Button */}
-            <div className="mt-4">
-              <Button
-                onClick={switchToOtherAccount}
-                variant="outline"
-                className="text-muted-foreground hover:text-foreground border-muted-foreground/20 hover:border-muted-foreground/40 transition-all"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Switch Account
-              </Button>
+        {/* Main Card */}
+        <div className="bg-card border border-border rounded-2xl shadow-2xl p-8 md:p-12">
+          {/* Header Section */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Fingerprint className="w-8 h-8 text-white" />
             </div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-4">
+              Create Your DEiD Profile
+            </h1>
+            <p className="text-muted-foreground text-lg leading-relaxed">
+              Transform your Decode data into a verifiable on-chain identity
+            </p>
           </div>
 
-          {isCheckingWallet && (
-            <div className="flex items-center gap-3 text-blue-600 text-lg font-semibold">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              Verifying wallet...
-            </div>
-          )}
-
-          {status === "wallet-check" && (
-            <div className="flex items-center gap-3 text-blue-600 text-lg font-semibold">
-              <Wallet className="w-6 h-6" />
-              Checking if wallet is primary...
-            </div>
-          )}
-
-          {status === "success" && (
-            <div className="flex items-center gap-3 text-green-600 text-lg font-semibold">
-              <CheckCircle className="w-6 h-6" />
-              Profile created successfully! Redirecting...
-            </div>
-          )}
-
-          {status === "error" && (
-            <div className="flex items-center gap-3 text-red-600 text-lg font-semibold">
-              <AlertCircle className="w-6 h-6" />
-              {errorMessage}
-            </div>
-          )}
-
-          {/* Step 2: Create Profile Button */}
-          {isConnected && isPrimaryWallet && (
-            <div className="flex flex-col items-center justify-center text-center w-full">
-              <h3 className="text-lg font-semibold mb-2">
-                Step 2: Create Your Profile
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Your primary wallet is verified. Ready to mint your DEiD
-                profile!
+          {/* Wallet Connection Section */}
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-2">
+                Step 1: Connect Wallet
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Connect your primary wallet to create your DEiD profile
               </p>
-              <Button
-                onClick={handleCreateProfile}
-                disabled={isCreating || status === "success"}
-                className="bg-[#CA4A87] hover:bg-[#b13e74] text-foreground font-bold text-xl px-12 py-6 rounded-full transition-all shadow-lg hover:shadow-primary/50 transform hover:scale-105 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {isCreating ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                ) : (
-                  <Fingerprint className="w-6 h-6" />
-                )}
-                {isCreating ? "CREATING PROFILE..." : "MINT ON-CHAIN PROFILE"}
-              </Button>
+
+              <div className="flex justify-center">
+                <div className="[&>div>button]:bg-gradient-to-r [&>div>button]:from-pink-500 [&>div>button]:to-red-600 [&>div>button]:hover:from-pink-600 [&>div>button]:hover:to-red-700 [&>div>button]:text-white [&>div>button]:border-0">
+                  <ConnectButton />
+                </div>
+              </div>
+
+              {/* Switch Account Button */}
+              <div className="mt-4">
+                <Button
+                  onClick={switchToOtherAccount}
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Switch Account
+                </Button>
+              </div>
+
+              {/* Toggle Wallet Hint Button */}
+              <div className="mt-2">
+                <Button
+                  onClick={() => {
+                    if (primaryWalletHint) {
+                      setPrimaryWalletHint("");
+                    } else {
+                      const primaryWalletAddress = getPrimaryWalletAddress();
+                      if (primaryWalletAddress) {
+                        setPrimaryWalletHint(
+                          formatWalletAddress(primaryWalletAddress)
+                        );
+                      } else {
+                        // Try to fetch from backend if not in sessionStorage
+                        fetch(
+                          `${
+                            process.env.DEID_AUTH_BACKEND ||
+                            "http://localhost:8000"
+                          }/api/v1/decode/my-profile`,
+                          {
+                            method: "GET",
+                            headers: { "Content-Type": "application/json" },
+                            credentials: "include",
+                          }
+                        )
+                          .then((response) => response.json())
+                          .then((data) => {
+                            if (
+                              data.success &&
+                              data.data.primary_wallet?.address
+                            ) {
+                              const address = data.data.primary_wallet.address;
+                              sessionStorage.setItem(
+                                "primaryWalletAddress",
+                                address
+                              );
+                              setPrimaryWalletHint(
+                                formatWalletAddress(address)
+                              );
+                            }
+                          })
+                          .catch((error) =>
+                            console.error(
+                              "Error fetching primary wallet:",
+                              error
+                            )
+                          );
+                      }
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {primaryWalletHint ? (
+                    <Eye className="w-4 h-4 mr-2" />
+                  ) : (
+                    <EyeOff className="w-4 h-4 mr-2" />
+                  )}
+                  {primaryWalletHint
+                    ? `${primaryWalletHint}`
+                    : "Your Primary Address"}
+                </Button>
+              </div>
             </div>
-          )}
+
+            {/* Status Messages */}
+            <div className="space-y-4">
+              {isCheckingWallet && (
+                <div className="flex items-center justify-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <span className="text-blue-800 dark:text-blue-200 font-medium">
+                    Verifying wallet...
+                  </span>
+                </div>
+              )}
+
+              {status === "wallet-check" && (
+                <div className="flex items-center justify-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <Wallet className="w-5 h-5 text-blue-600" />
+                  <span className="text-blue-800 dark:text-blue-200 font-medium">
+                    Checking if wallet is primary...
+                  </span>
+                </div>
+              )}
+
+              {status === "success" && (
+                <div className="flex items-center justify-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="text-green-800 dark:text-green-200 font-medium">
+                    Profile created successfully! Redirecting...
+                  </span>
+                </div>
+              )}
+
+              {status === "error" && (
+                <div className="flex items-center justify-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-800 dark:text-red-200 font-medium">
+                    {errorMessage}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Create Profile Section */}
+            {isConnected && isPrimaryWallet && (
+              <div className="pt-6 border-t border-border">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold mb-2">
+                    Step 2: Create Profile
+                  </h2>
+                  <p className="text-muted-foreground mb-6">
+                    Your primary wallet is verified. Ready to mint your DEiD
+                    profile!
+                  </p>
+
+                  <Button
+                    onClick={handleCreateProfile}
+                    disabled={isCreating || status === "success"}
+                    size="lg"
+                    className="bg-gradient-to-r from-[#CA4A87] to-[#b13e74] hover:from-[#b13e74] hover:to-[#a0335f] text-white font-bold text-lg px-8 py-4 rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full max-w-sm mx-auto"
+                  >
+                    {isCreating ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Fingerprint className="w-5 h-5" />
+                    )}
+                    {isCreating
+                      ? "Creating Profile..."
+                      : "Mint On-Chain Profile"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
