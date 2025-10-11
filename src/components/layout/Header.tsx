@@ -9,7 +9,9 @@ export const Header = () => {
         {/* You can add breadcrumbs or page title here if needed */}
       </div>
 
-      <WalletValidator />
+      <div className="mr-2">
+        <WalletValidator />
+      </div>
     </header>
   );
 };

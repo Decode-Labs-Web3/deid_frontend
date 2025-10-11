@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { StreakTracker } from "@/components/layout/StreakTracker";
 import { ProfileCard } from "@/components/cards/ProfileCard";
 import { StatCard } from "@/components/cards/StatCard";
 import { TrustWheel } from "@/components/charts/TrustWheel";
@@ -292,6 +293,7 @@ const Profile = () => {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto p-8 space-y-8">
+        <StreakTracker />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <ProfileCard

@@ -142,7 +142,7 @@ export const StreakTracker = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-orange-400/20 via-pink-400/20 via-purple-500/20 to-blue-600/20 border border-border rounded-xl p-4 mx-6 mb-4">
+      <div className="bg-gradient-to-r from-orange-400/20 via-pink-400/20 via-purple-500/20 to-blue-600/20 border border-border rounded-xl p-4 mx-6 mb-4 mt-2">
         <div className="flex items-center justify-center">
           <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin mr-3"></div>
           <span className="text-sm text-muted-foreground">
@@ -176,7 +176,7 @@ export const StreakTracker = () => {
   if (!streakInfo) {
     console.log("🔍 StreakTracker: No streak data available");
     return (
-      <div className="bg-gradient-to-r from-orange-400/20 via-pink-400/20 via-purple-500/20 to-blue-600/20 border border-border rounded-xl p-4 mx-6 mb-4">
+      <div className="bg-gradient-to-r from-orange-400/20 via-pink-400/20 via-purple-500/20 to-blue-600/20 border border-border rounded-xl p-4 mx-6 mb-4 mt-2">
         <div className="flex items-center justify-center">
           <span className="text-sm text-muted-foreground">
             No streak data available
@@ -194,7 +194,7 @@ export const StreakTracker = () => {
   );
 
   return (
-    <div className="bg-gradient-to-r from-orange-400/20 via-pink-400/20 via-purple-500/20 to-blue-600/20 border border-border rounded-xl p-4 mx-6 mb-4">
+    <div className="max-w-7xl mx-auto bg-gradient-to-r from-orange-400/20 via-pink-400/20 via-purple-500/20 to-blue-600/20 border border-border rounded-xl p-4 mx-6 mb-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-primary" />
@@ -224,9 +224,7 @@ export const StreakTracker = () => {
       <div className="relative mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium">Current Streak</span>
-          <span className="text-sm font-bold">
-            {streak.currentStreak} / 1000
-          </span>
+          <span className="text-sm font-bold">{streak.currentStreak} days</span>
         </div>
 
         <div className="relative h-3 bg-background/50 rounded-full overflow-hidden">
