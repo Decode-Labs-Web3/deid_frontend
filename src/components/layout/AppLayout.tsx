@@ -2,6 +2,7 @@
 
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { StreakTracker } from "./StreakTracker";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,7 +14,8 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       <Sidebar />
       <div className="flex-1 ml-52">
         <Header />
-        <main className="pt-16">{children}</main>
+        <StreakTracker />
+        <main className="pt-4">{children}</main>
       </div>
     </div>
   );

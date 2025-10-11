@@ -129,7 +129,6 @@ export async function GET(request: NextRequest) {
           );
         }
       } catch (fetchError) {
-        console.error(`❌ Network error for ${chain}:`, fetchError);
         continue;
       }
     }
