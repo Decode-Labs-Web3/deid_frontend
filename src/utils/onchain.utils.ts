@@ -2,6 +2,7 @@
 import { ethers } from "ethers";
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
 import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
+import { fetchProfileMetadataFromIPFS } from "./ipfs.utils";
 
 // Extend Window interface to include ethereum
 declare global {
@@ -133,33 +134,24 @@ export const checkOnChainProfile = async (
 
     console.log("✅ Profile found:", profile.username);
 
-    // Step 2: Fetch profile metadata directly from IPFS
+    // Step 2: Fetch profile metadata directly from IPFS using improved utility
     console.log("🌐 Fetching profile metadata directly from IPFS...");
     let profile_metadata: ProfileMetadata | null = null;
 
     if (profile.metadataURI && profile.metadataURI !== "") {
       try {
-        const ipfsHash = profile.metadataURI.replace(/^ipfs:\/\//, "");
-        const ipfsUrl = `http://35.247.142.76:8080/ipfs/${ipfsHash}`;
+        profile_metadata = await fetchProfileMetadataFromIPFS(
+          profile.metadataURI,
+          {
+            timeout: 10000,
+            retries: 3,
+          }
+        );
 
-        console.log("🔗 Fetching from IPFS:", ipfsUrl);
-        const ipfsResponse = await fetch(ipfsUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (ipfsResponse.ok) {
-          profile_metadata = await ipfsResponse.json();
-          console.log(
-            "✅ Profile metadata fetched from IPFS:",
-            profile_metadata
-          );
+        if (profile_metadata) {
+          console.log("✅ Profile metadata fetched from IPFS successfully");
         } else {
-          console.error("❌ IPFS request failed:", ipfsResponse.status);
+          console.warn("⚠️ Failed to fetch profile metadata from IPFS");
         }
       } catch (error) {
         console.error("❌ Error fetching profile metadata from IPFS:", error);

@@ -8,9 +8,9 @@ import { StatCard } from "@/components/cards/StatCard";
 import { TrustWheel } from "@/components/charts/TrustWheel";
 import { MetricCard } from "@/components/cards/MetricCard";
 import { NFTCard } from "@/components/cards/NFTCard";
-import { getSessionId, logout } from "@/utils/session.utils";
 import { checkOnChainProfile, OnChainProfileData } from "@/utils/onchain.utils";
 import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
 
 interface PrimaryWallet {
   _id: string;
@@ -65,14 +65,6 @@ interface NFTData {
   }>;
 }
 
-interface ApiResponse {
-  success: boolean;
-  statusCode: number;
-  message: string;
-  data: ProfileData;
-  requestId: string | null;
-}
-
 const Profile = () => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [onChainData, setOnChainData] = useState<OnChainProfileData | null>(
@@ -84,6 +76,7 @@ const Profile = () => {
   const [nftLoading, setNftLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { address: connectedAddress, isConnected } = useAccount();
 
   // Function to fetch NFTs
   const fetchNFTs = async (walletAddress: string) => {
@@ -124,95 +117,88 @@ const Profile = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        console.log("🚀 Starting profile data fetch...");
+        console.log("🚀 Starting profile data fetch from IPFS...");
         setLoading(true);
         setError(null);
 
-        const sessionId = getSessionId();
-        console.log("🔑 Session ID:", sessionId);
-
-        if (!sessionId) {
-          console.log("❌ No session found");
-          throw new Error("No session found");
-        }
-
-        // Use the same backend URL as the API route, but make it accessible to client
-        const backendUrl =
-          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
-        const apiUrl = `${backendUrl}/api/v1/decode/my-profile`;
-
-        console.log("🌐 Backend URL:", backendUrl);
-        console.log("📡 API URL:", apiUrl);
-        console.log("🔑 Session ID:", sessionId);
-
-        const response = await fetch(apiUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: `deid_session_id=${sessionId}`,
-          },
-          credentials: "include",
-        });
-
-        console.log("📡 HTTP Response Status:", response.status);
-        console.log("📡 HTTP Response OK:", response.ok);
-        console.log(
-          "📡 Response Headers:",
-          Object.fromEntries(response.headers.entries())
-        );
-
-        if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            // Session invalid, logout user
-            logout();
-            return;
-          }
-          throw new Error(`Failed to fetch profile: ${response.statusText}`);
-        }
-
-        const apiResponse: ApiResponse = await response.json();
-        console.log("📊 API Response:", apiResponse);
-
-        if (!apiResponse.success) {
-          throw new Error(apiResponse.message || "Failed to fetch profile");
-        }
-
-        const userData = apiResponse.data;
-        setProfileData(userData);
-
-        // Check on-chain profile using the primary wallet address
-        const walletAddress = userData.primary_wallet?.address;
-
-        if (walletAddress) {
-          console.log("🔍 Checking on-chain profile...");
-          const onChainProfile = await checkOnChainProfile(walletAddress);
-
-          if (!onChainProfile) {
-            console.log(
-              "❌ No on-chain profile found, redirecting to create-account"
-            );
-            sessionStorage.setItem("primaryWalletAddress", walletAddress);
-            console.log("Primary wallet address stored:", walletAddress);
-            router.push("/create-account");
-            return;
-          }
-
-          console.log("✅ On-chain profile found:", onChainProfile);
-          setOnChainData(onChainProfile);
-        } else {
-          console.log(
-            "❌ No primary wallet address found, please set your primary wallet address in Decode Portal"
-          );
-          setError(
-            "No primary wallet address found. Please set your primary wallet address in Decode Portal."
-          );
+        // Check if wallet is connected
+        if (!isConnected || !connectedAddress) {
+          console.log("❌ No wallet connected");
+          setError("Please connect your wallet to view your profile");
           return;
         }
 
-        // Fetch NFTs for the primary wallet
-        if (walletAddress) {
-          await fetchNFTs(walletAddress);
+        console.log("🔗 Connected wallet address:", connectedAddress);
+
+        // Fetch on-chain profile data directly from IPFS
+        console.log("🔍 Fetching on-chain profile from IPFS...");
+        const onChainProfile = await checkOnChainProfile(connectedAddress);
+
+        if (!onChainProfile) {
+          console.log(
+            "❌ No on-chain profile found, redirecting to create-account"
+          );
+          sessionStorage.setItem("primaryWalletAddress", connectedAddress);
+          console.log("Primary wallet address stored:", connectedAddress);
+          router.push("/create-account");
+          return;
         }
+
+        console.log("✅ On-chain profile found:", onChainProfile);
+        setOnChainData(onChainProfile);
+
+        // Create profile data from on-chain data for compatibility
+        if (onChainProfile.profile_metadata) {
+          const metadata = onChainProfile.profile_metadata;
+          const profileDataFromIPFS: ProfileData = {
+            _id: metadata.decode_user_id || "",
+            email: null,
+            username: metadata.username,
+            display_name: metadata.display_name,
+            bio: metadata.bio,
+            avatar_ipfs_hash: metadata.avatar_ipfs_hash,
+            role: "user",
+            last_login: new Date().toISOString(),
+            is_active: true,
+            primary_wallet: {
+              _id: metadata.primary_wallet.id || "",
+              address: metadata.primary_wallet.address,
+              user_id: metadata.primary_wallet.user_id,
+              name_service: metadata.primary_wallet.name_service,
+              is_primary: metadata.primary_wallet.is_primary,
+              createdAt: metadata.primary_wallet.created_at,
+              updatedAt: metadata.primary_wallet.updated_at,
+              __v: metadata.primary_wallet.version,
+            },
+            wallets: metadata.wallets.map((wallet) => ({
+              _id: wallet.id || "",
+              address: wallet.address,
+              user_id: wallet.user_id,
+              name_service: wallet.name_service,
+              is_primary: wallet.is_primary,
+              createdAt: wallet.created_at,
+              updatedAt: wallet.updated_at,
+              __v: wallet.version,
+            })),
+            following_number: 0,
+            followers_number: 0,
+            is_following: false,
+            is_follower: false,
+            is_blocked: false,
+            is_blocked_by: false,
+            mutual_followers_number: 0,
+            mutual_followers_list: [],
+            taskScore: 0,
+            socialScore: 0,
+            chainScore: 0,
+            trustScore: 0,
+            __v: 0,
+          };
+          setProfileData(profileDataFromIPFS);
+        }
+
+        // Fetch NFTs for the connected wallet
+        await fetchNFTs(connectedAddress);
 
         console.log("✅ Profile data fetch completed successfully");
       } catch (error) {
@@ -220,21 +206,20 @@ const Profile = () => {
         setError(
           error instanceof Error ? error.message : "Failed to load profile"
         );
-
-        // If it's a session error, logout the user
-        if (error instanceof Error && error.message.includes("session")) {
-          console.log("🔓 Session error detected, logging out user");
-          logout();
-        }
       } finally {
         console.log("🏁 Profile fetch process completed");
         setLoading(false);
       }
     };
 
-    console.log("🎯 Profile component mounted, starting data fetch...");
-    fetchProfileData();
-  }, [router]);
+    // Only fetch if wallet is connected
+    if (isConnected && connectedAddress) {
+      console.log("🎯 Profile component mounted, starting data fetch...");
+      fetchProfileData();
+    } else {
+      setLoading(false);
+    }
+  }, [router, isConnected, connectedAddress]);
 
   if (loading) {
     return (
@@ -253,7 +238,7 @@ const Profile = () => {
   }
 
   if (error) {
-    const isWalletError = error.includes("primary wallet address");
+    const isWalletError = error.includes("connect your wallet");
 
     return (
       <AppLayout>
@@ -265,24 +250,18 @@ const Profile = () => {
             <p className="text-muted-foreground mb-4">{error}</p>
             <div className="flex gap-3 justify-center">
               {isWalletError ? (
+                <p className="text-sm text-muted-foreground">
+                  Please connect your wallet using the button in the top right
+                  corner
+                </p>
+              ) : (
                 <button
-                  onClick={() =>
-                    window.open(
-                      "https://app.decodenetwork.app/dashboard/wallets",
-                      "_blank"
-                    )
-                  }
-                  className="px-6 py-2 bg-[#CA4A87] text-white rounded-md hover:bg-[#b13e74] transition-colors"
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                 >
-                  Go to Decode Wallets
+                  Retry
                 </button>
-              ) : null}
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-              >
-                Retry
-              </button>
+              )}
             </div>
           </div>
         </div>
