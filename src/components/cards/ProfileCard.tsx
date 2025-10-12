@@ -29,7 +29,10 @@ export const ProfileCard = ({
 
         // Fetch avatar directly from custom IPFS node
         console.log("🌐 Fetching avatar directly from custom IPFS node");
-        const ipfsUrl = `http://35.247.142.76:8080/ipfs/${avatar_ipfs_hash}`;
+        const ipfsUrl = `${
+          process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
+          "http://35.247.142.76:8080/ipfs"
+        }/${avatar_ipfs_hash}`;
 
         const response = await fetch(ipfsUrl, {
           method: "GET",
@@ -63,29 +66,34 @@ export const ProfileCard = ({
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 flex items-start gap-6">
-      <div className="relative">
-        {isExternalUrl(avatarUrl) ? (
-          // Use <img> for external URLs (e.g., IPFS) to avoid next/image config issues
-          <img
-            src={avatarUrl}
-            alt="Profile"
-            width={112}
-            height={112}
-            className="w-28 h-28 rounded-2xl object-cover"
-            style={{ objectFit: "cover" }}
-          />
-        ) : (
-          // Use next/image for local/static images
-          <Image
-            src={avatarUrl}
-            alt="Profile"
-            width={112}
-            height={112}
-            className="w-28 h-28 rounded-2xl object-cover"
-          />
-        )}
+      <div className="relative w-28 h-28">
+        {/* Gradient frame */}
+        <div className="w-full h-full rounded-2xl bg-gradient-to-br from-[#CA4A87] via-[#b13e74] to-[#a0335f] p-0.5">
+          <div className="w-full h-full rounded-2xl bg-background overflow-hidden">
+            {isExternalUrl(avatarUrl) ? (
+              // Use <img> for external URLs (e.g., IPFS) to avoid next/image config issues
+              <img
+                src={avatarUrl}
+                alt="Profile"
+                width={112}
+                height={112}
+                className="w-full h-full object-cover"
+                style={{ objectFit: "cover" }}
+              />
+            ) : (
+              // Use next/image for local/static images
+              <Image
+                src={avatarUrl}
+                alt="Profile"
+                width={112}
+                height={112}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+        </div>
         {loading && (
-          <div className="absolute inset-0 w-28 h-28 rounded-2xl bg-background/50 flex items-center justify-center">
+          <div className="absolute inset-0 w-full h-full rounded-2xl bg-background/50 flex items-center justify-center">
             <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
           </div>
         )}
