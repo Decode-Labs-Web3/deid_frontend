@@ -9,8 +9,8 @@ import { TrustWheel } from "@/components/charts/TrustWheel";
 import { MetricCard } from "@/components/cards/MetricCard";
 import { NFTCard } from "@/components/cards/NFTCard";
 import { checkOnChainProfile, OnChainProfileData } from "@/utils/onchain.utils";
+import { getPrimaryWalletAddress } from "@/utils/session.utils";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 
 interface PrimaryWallet {
   _id: string;
@@ -76,7 +76,8 @@ const Profile = () => {
   const [nftLoading, setNftLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { address: connectedAddress, isConnected } = useAccount();
+  // Note: We no longer depend on wallet connection for initial data fetch
+  // Data is fetched from backend first, then on-chain data using primary wallet
 
   // Function to fetch NFTs
   const fetchNFTs = async (walletAddress: string) => {
@@ -117,29 +118,69 @@ const Profile = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        console.log("🚀 Starting profile data fetch from IPFS...");
+        console.log("🚀 Starting profile data fetch...");
         setLoading(true);
         setError(null);
 
-        // Check if wallet is connected
-        if (!isConnected || !connectedAddress) {
-          console.log("❌ No wallet connected");
-          setError("Please connect your wallet to view your profile");
-          return;
+        // Step 1: Fetch user data from backend first
+        console.log("📡 Fetching user data from backend...");
+        const backendUrl =
+          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        const backendResponse = await fetch(
+          `${backendUrl}/api/v1/decode/my-profile`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
+
+        if (!backendResponse.ok) {
+          throw new Error(`Backend API error: ${backendResponse.statusText}`);
         }
 
-        console.log("🔗 Connected wallet address:", connectedAddress);
+        const backendData = await backendResponse.json();
 
-        // Fetch on-chain profile data directly from IPFS
+        if (!backendData.success || !backendData.data) {
+          throw new Error("Failed to fetch user data from backend");
+        }
+
+        const userProfile = backendData.data;
+        console.log("✅ Backend user data fetched:", userProfile);
+
+        // Step 2: Store primary wallet address in sessionStorage
+        if (userProfile.primary_wallet?.address) {
+          sessionStorage.setItem(
+            "primaryWalletAddress",
+            userProfile.primary_wallet.address
+          );
+          console.log(
+            "💾 Primary wallet stored:",
+            userProfile.primary_wallet.address
+          );
+        }
+
+        // Step 3: Set profile data from backend
+        setProfileData(userProfile);
+
+        // Step 4: Get primary wallet address (from sessionStorage or backend)
+        const primaryWalletAddress =
+          getPrimaryWalletAddress() || userProfile.primary_wallet?.address;
+
+        if (!primaryWalletAddress) {
+          throw new Error("No primary wallet address found");
+        }
+
+        console.log("🔗 Using primary wallet address:", primaryWalletAddress);
+
+        // Step 5: Fetch on-chain profile data using primary wallet
         console.log("🔍 Fetching on-chain profile from IPFS...");
-        const onChainProfile = await checkOnChainProfile(connectedAddress);
+        const onChainProfile = await checkOnChainProfile(primaryWalletAddress);
 
         if (!onChainProfile) {
           console.log(
             "❌ No on-chain profile found, redirecting to create-account"
           );
-          sessionStorage.setItem("primaryWalletAddress", connectedAddress);
-          console.log("Primary wallet address stored:", connectedAddress);
           router.push("/create-account");
           return;
         }
@@ -147,58 +188,8 @@ const Profile = () => {
         console.log("✅ On-chain profile found:", onChainProfile);
         setOnChainData(onChainProfile);
 
-        // Create profile data from on-chain data for compatibility
-        if (onChainProfile.profile_metadata) {
-          const metadata = onChainProfile.profile_metadata;
-          const profileDataFromIPFS: ProfileData = {
-            _id: metadata.decode_user_id || "",
-            email: null,
-            username: metadata.username,
-            display_name: metadata.display_name,
-            bio: metadata.bio,
-            avatar_ipfs_hash: metadata.avatar_ipfs_hash,
-            role: "user",
-            last_login: new Date().toISOString(),
-            is_active: true,
-            primary_wallet: {
-              _id: metadata.primary_wallet.id || "",
-              address: metadata.primary_wallet.address,
-              user_id: metadata.primary_wallet.user_id,
-              name_service: metadata.primary_wallet.name_service,
-              is_primary: metadata.primary_wallet.is_primary,
-              createdAt: metadata.primary_wallet.created_at,
-              updatedAt: metadata.primary_wallet.updated_at,
-              __v: metadata.primary_wallet.version,
-            },
-            wallets: metadata.wallets.map((wallet) => ({
-              _id: wallet.id || "",
-              address: wallet.address,
-              user_id: wallet.user_id,
-              name_service: wallet.name_service,
-              is_primary: wallet.is_primary,
-              createdAt: wallet.created_at,
-              updatedAt: wallet.updated_at,
-              __v: wallet.version,
-            })),
-            following_number: 0,
-            followers_number: 0,
-            is_following: false,
-            is_follower: false,
-            is_blocked: false,
-            is_blocked_by: false,
-            mutual_followers_number: 0,
-            mutual_followers_list: [],
-            taskScore: 0,
-            socialScore: 0,
-            chainScore: 0,
-            trustScore: 0,
-            __v: 0,
-          };
-          setProfileData(profileDataFromIPFS);
-        }
-
-        // Fetch NFTs for the connected wallet
-        await fetchNFTs(connectedAddress);
+        // Step 6: Fetch NFTs for the primary wallet
+        await fetchNFTs(primaryWalletAddress);
 
         console.log("✅ Profile data fetch completed successfully");
       } catch (error) {
@@ -212,14 +203,10 @@ const Profile = () => {
       }
     };
 
-    // Only fetch if wallet is connected
-    if (isConnected && connectedAddress) {
-      console.log("🎯 Profile component mounted, starting data fetch...");
-      fetchProfileData();
-    } else {
-      setLoading(false);
-    }
-  }, [router, isConnected, connectedAddress]);
+    // Fetch profile data on component mount
+    console.log("🎯 Profile component mounted, starting data fetch...");
+    fetchProfileData();
+  }, [router]);
 
   if (loading) {
     return (
@@ -229,7 +216,7 @@ const Profile = () => {
             <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading profile...</p>
             <p className="text-xs text-muted-foreground mt-2">
-              Fetching user data and checking on-chain profile
+              Fetching user data from backend and on-chain profile
             </p>
           </div>
         </div>
@@ -238,8 +225,6 @@ const Profile = () => {
   }
 
   if (error) {
-    const isWalletError = error.includes("connect your wallet");
-
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-full">
@@ -249,19 +234,12 @@ const Profile = () => {
             </div>
             <p className="text-muted-foreground mb-4">{error}</p>
             <div className="flex gap-3 justify-center">
-              {isWalletError ? (
-                <p className="text-sm text-muted-foreground">
-                  Please connect your wallet using the button in the top right
-                  corner
-                </p>
-              ) : (
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                >
-                  Retry
-                </button>
-              )}
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+              >
+                Retry
+              </button>
             </div>
           </div>
         </div>

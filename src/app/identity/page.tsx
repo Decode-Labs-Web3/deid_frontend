@@ -7,6 +7,7 @@ import { X, Fingerprint } from "lucide-react";
 import Image from "next/image";
 import { useAccount, useWalletClient } from "wagmi";
 import { OnChainProfileData, checkOnChainProfile } from "@/utils/onchain.utils";
+import { getPrimaryWalletAddress } from "@/utils/session.utils";
 import { ethers } from "ethers";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
@@ -67,30 +68,70 @@ const Identity = () => {
   const { address: connectedAddress, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
 
-  // Fetch on-chain profile data
+  // Fetch identity data (backend first, then on-chain using primary wallet)
   useEffect(() => {
     const fetchIdentityData = async () => {
       try {
-        console.log("🚀 Starting identity data fetch from IPFS...");
+        console.log("🚀 Starting identity data fetch...");
         setLoading(true);
         setError(null);
 
-        // Check if wallet is connected
-        if (!isConnected || !connectedAddress) {
-          console.log("❌ No wallet connected");
-          setError("Please connect your wallet to view your identity");
-          return;
+        // Step 1: Fetch user data from backend first
+        console.log("📡 Fetching user data from backend...");
+        const backendUrl =
+          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        const backendResponse = await fetch(
+          `${backendUrl}/api/v1/decode/my-profile`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
+
+        if (!backendResponse.ok) {
+          throw new Error(`Backend API error: ${backendResponse.statusText}`);
         }
 
-        console.log("🔗 Connected wallet address:", connectedAddress);
+        const backendData = await backendResponse.json();
 
-        // Fetch on-chain profile data directly using IPFS utils
-        console.log("🔍 Fetching on-chain profile directly from IPFS...");
-        const onChainProfile = await checkOnChainProfile(connectedAddress);
+        if (!backendData.success || !backendData.data) {
+          throw new Error("Failed to fetch user data from backend");
+        }
+
+        const userProfile = backendData.data;
+        console.log("✅ Backend user data fetched:", userProfile);
+
+        // Step 2: Store primary wallet address in sessionStorage
+        if (userProfile.primary_wallet?.address) {
+          sessionStorage.setItem(
+            "primaryWalletAddress",
+            userProfile.primary_wallet.address
+          );
+          console.log(
+            "💾 Primary wallet stored:",
+            userProfile.primary_wallet.address
+          );
+        }
+
+        // Step 3: Get primary wallet address (from sessionStorage or backend)
+        const primaryWalletAddress =
+          getPrimaryWalletAddress() || userProfile.primary_wallet?.address;
+
+        if (!primaryWalletAddress) {
+          throw new Error("No primary wallet address found");
+        }
+
+        console.log("🔗 Using primary wallet address:", primaryWalletAddress);
+
+        // Step 4: Fetch on-chain profile data using primary wallet
+        console.log("🔍 Fetching on-chain profile from IPFS...");
+        const onChainProfile = await checkOnChainProfile(primaryWalletAddress);
 
         if (!onChainProfile) {
           throw new Error("No on-chain profile found for this wallet address");
         }
+
         console.log(
           "📊 Raw IPFS data fetched via ipfs.utils.ts:",
           JSON.stringify(onChainProfile, null, 2)
@@ -125,14 +166,10 @@ const Identity = () => {
       }
     };
 
-    // Only fetch if wallet is connected
-    if (isConnected && connectedAddress) {
-      console.log("🎯 Identity component mounted, starting data fetch...");
-      fetchIdentityData();
-    } else {
-      setLoading(false);
-    }
-  }, [isConnected, connectedAddress]);
+    // Fetch identity data on component mount
+    console.log("🎯 Identity component mounted, starting data fetch...");
+    fetchIdentityData();
+  }, []);
 
   // Fetch avatar from IPFS when profile metadata is available
   useEffect(() => {
@@ -199,9 +236,27 @@ const Identity = () => {
         throw new Error("Please connect your wallet first");
       }
 
+      // Check if connected wallet is the primary wallet
+      const primaryWalletAddress = getPrimaryWalletAddress();
+      if (!primaryWalletAddress) {
+        throw new Error("No primary wallet found. Please refresh the page.");
+      }
+
+      if (
+        connectedAddress.toLowerCase() !== primaryWalletAddress.toLowerCase()
+      ) {
+        throw new Error(
+          `Please connect your primary wallet (${primaryWalletAddress.slice(
+            0,
+            6
+          )}...${primaryWalletAddress.slice(-6)}) to sync your profile`
+        );
+      }
+
       console.log("🔄 Starting profile sync...");
       console.log("👤 User Wallet:", connectedAddress);
       console.log("🔗 Contract:", PROXY_ADDRESS);
+      console.log("✅ Connected to primary wallet:", primaryWalletAddress);
 
       // Fetch update profile data from backend
       console.log("📡 Fetching update profile data...");
@@ -519,8 +574,24 @@ const Identity = () => {
               {/* Sync Button */}
               <Button
                 onClick={handleSyncProfile}
-                disabled={isSyncing || !isConnected || !onChainData}
-                className="w-full bg-gradient-to-r from-[#CA4A87] to-[#b13e74] hover:from-[#b13e74] hover:to-[#a0335f] text-white font-semibold"
+                disabled={(() => {
+                  const primaryWallet = getPrimaryWalletAddress();
+                  const isNotPrimaryWallet = Boolean(
+                    isConnected &&
+                      connectedAddress &&
+                      primaryWallet &&
+                      connectedAddress.toLowerCase() !==
+                        primaryWallet.toLowerCase()
+                  );
+
+                  return (
+                    isSyncing ||
+                    !isConnected ||
+                    !onChainData ||
+                    isNotPrimaryWallet
+                  );
+                })()}
+                className="w-full bg-gradient-to-r from-[#CA4A87] to-[#b13e74] hover:from-[#b13e74] hover:to-[#a0335f] text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSyncing ? (
                   <>
@@ -562,6 +633,22 @@ const Identity = () => {
                   </span>
                 </div>
               )}
+
+              {isConnected &&
+                connectedAddress &&
+                getPrimaryWalletAddress() &&
+                connectedAddress.toLowerCase() !==
+                  getPrimaryWalletAddress()?.toLowerCase() && (
+                  <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                    <span className="text-orange-800 dark:text-orange-200 font-medium">
+                      Please connect your primary wallet (
+                      {getPrimaryWalletAddress()?.slice(0, 6)}...
+                      {getPrimaryWalletAddress()?.slice(-6)}) to sync your
+                      profile
+                    </span>
+                  </div>
+                )}
 
               {isConnected && !onChainData && (
                 <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
