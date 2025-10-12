@@ -5,8 +5,51 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { BadgeCard } from "@/components/cards/BadgeCard";
 import { X, Fingerprint } from "lucide-react";
 import Image from "next/image";
-import { useAccount } from "wagmi";
+import { useAccount, useWalletClient } from "wagmi";
 import { OnChainProfileData, checkOnChainProfile } from "@/utils/onchain.utils";
+import { ethers } from "ethers";
+import { Button } from "@/components/ui/button";
+import { Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
+import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
+
+// Contract configuration - using environment variable or fallback
+const PROXY_ADDRESS =
+  process.env.PROXY_ADDRESS || "0x76050bee51946D027B5548d97C6166e08e5a2B1C";
+
+interface UpdateProfileData {
+  method: string;
+  params: {
+    metadataURI: string;
+  };
+  calldata: string;
+  metadata: {
+    username: string;
+    display_name: string;
+    bio: string;
+    avatar_ipfs_hash: string;
+    primary_wallet: {
+      id: string;
+      address: string;
+      user_id: string;
+      name_service: string | null;
+      is_primary: boolean;
+      created_at: string;
+      updated_at: string;
+      version: number;
+    };
+    wallets: unknown[];
+    decode_user_id: string;
+  };
+  ipfs_hash: string;
+  validator: {
+    signature: string;
+    signer: string;
+    payload: string;
+    message_hash: string;
+    type: string;
+  };
+}
 
 const Identity = () => {
   const [onChainData, setOnChainData] = useState<OnChainProfileData | null>(
@@ -16,7 +59,13 @@ const Identity = () => {
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>("/deid_logo.png");
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">(
+    "idle"
+  );
+  const [syncMessage, setSyncMessage] = useState("");
   const { address: connectedAddress, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
 
   // Fetch on-chain profile data
   useEffect(() => {
@@ -138,6 +187,171 @@ const Identity = () => {
     fetchAvatarFromIPFS();
   }, [onChainData?.profile_metadata?.avatar_ipfs_hash]);
 
+  // Sync on-chain profile function
+  const handleSyncProfile = async () => {
+    try {
+      setIsSyncing(true);
+      setSyncStatus("idle");
+      setSyncMessage("");
+
+      // Check if wallet is connected
+      if (!isConnected || !connectedAddress || !walletClient) {
+        throw new Error("Please connect your wallet first");
+      }
+
+      console.log("🔄 Starting profile sync...");
+      console.log("👤 User Wallet:", connectedAddress);
+      console.log("🔗 Contract:", PROXY_ADDRESS);
+
+      // Fetch update profile data from backend
+      console.log("📡 Fetching update profile data...");
+      const backendUrl =
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+      const response = await fetch(`${backendUrl}/api/v1/sync/update-profile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Frontend-Internal-Request": "true",
+        },
+        credentials: "include",
+        cache: "no-store",
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch update profile data");
+      }
+
+      const responseData = await response.json();
+
+      if (!responseData.success || !responseData.data) {
+        throw new Error("Invalid response from backend");
+      }
+
+      const updateData: UpdateProfileData = responseData.data;
+      console.log("✅ Update profile data received:", updateData);
+
+      // Check if wallet client is on the correct chain
+      if (walletClient.chain?.id !== 11155111) {
+        console.error("❌ Wallet client is not on Ethereum Sepolia!");
+        console.error("   Current chain ID:", walletClient.chain?.id);
+        console.error("   Expected chain ID: 11155111");
+        throw new Error("Please switch to Ethereum Sepolia in your wallet");
+      }
+
+      // Create ethers provider from wallet client
+      const provider = new ethers.BrowserProvider(walletClient);
+      const signer = await provider.getSigner();
+
+      // Connect to contract using the same pattern as create profile
+      let contract;
+
+      try {
+        // First try with DEiDProfile ABI
+        console.log("🔧 Trying DEiDProfile ABI...");
+        const DEiDProfileFactory = new ethers.ContractFactory(
+          DEID_PROFILE_ABI.abi,
+          DEID_PROFILE_ABI.bytecode,
+          signer
+        );
+        contract = DEiDProfileFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+
+        // Test if this ABI works
+        await contract.getProfile(connectedAddress);
+        console.log("✅ DEiDProfile ABI works with proxy");
+      } catch {
+        console.log("⚠️ DEiDProfile ABI failed, trying DEiDProxy ABI...");
+
+        // Try with DEiDProxy ABI
+        const DEiDProxyFactory = new ethers.ContractFactory(
+          DEID_PROXY_ABI.abi,
+          DEID_PROXY_ABI.bytecode,
+          signer
+        );
+        contract = DEiDProxyFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+        console.log("✅ Using DEiDProxy ABI");
+      }
+
+      console.log("✅ Connected to contract");
+
+      // Prepare update data
+      const metadataURI = updateData.params.metadataURI;
+      const signature = updateData.validator.signature.startsWith("0x")
+        ? updateData.validator.signature
+        : `0x${updateData.validator.signature}`;
+
+      console.log("\n📝 Update Data:");
+      console.log("   Metadata URI:", metadataURI);
+      console.log("   Signature:", signature);
+
+      // Update profile
+      console.log("\n✍️  Updating profile...");
+
+      const tx = await contract.updateProfile(metadataURI, signature, {
+        gasLimit: 500000,
+        maxFeePerGas: ethers.parseUnits("100", "gwei"),
+        maxPriorityFeePerGas: ethers.parseUnits("2", "gwei"),
+      });
+
+      console.log("   Transaction Hash:", tx.hash);
+      console.log("   Waiting for confirmation...");
+
+      const receipt = await tx.wait();
+
+      if (receipt.status === 1) {
+        console.log("✅ Profile updated successfully!");
+        console.log("   Block Number:", receipt.blockNumber);
+        console.log("   Gas Used:", receipt.gasUsed.toString());
+
+        // Verify profile
+        const updatedProfile = await contract.getProfile(connectedAddress);
+        console.log("\n✅ Profile verified:");
+        console.log("   Username:", updatedProfile.username);
+        console.log("   Metadata URI:", updatedProfile.metadataURI);
+        console.log(
+          "   Last Updated:",
+          new Date(Number(updatedProfile.lastUpdated) * 1000).toISOString()
+        );
+
+        console.log(
+          "\n🔗 Explorer Link:",
+          `https://sepolia.etherscan.io/tx/${tx.hash}`
+        );
+
+        console.log("\n🎉 SUCCESS! Profile updated and verified!");
+
+        setSyncStatus("success");
+        setSyncMessage("Profile synced successfully! Refreshing data...");
+
+        // Refresh the profile data after a short delay
+        setTimeout(async () => {
+          try {
+            const refreshedProfile = await checkOnChainProfile(
+              connectedAddress
+            );
+            if (refreshedProfile) {
+              setOnChainData(refreshedProfile);
+              console.log("✅ Profile data refreshed");
+            }
+          } catch (error) {
+            console.error("❌ Error refreshing profile data:", error);
+          }
+        }, 2000);
+      } else {
+        throw new Error("Transaction failed");
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("❌ Sync Error:", errorMessage);
+
+      setSyncStatus("error");
+      setSyncMessage(errorMessage || "Error syncing profile");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Get wallet addresses from IPFS data
   const walletAddresses =
     onChainData?.profile_metadata?.wallets?.map((wallet) => wallet.address) ||
@@ -217,7 +431,7 @@ const Identity = () => {
           {/* Decode Information */}
           <div className="space-y-8">
             <h2 className="text-2xl font-bold border-b border-border pb-4">
-              Decode Information
+              Decentralized Identity
             </h2>
 
             <div className="flex items-start gap-6">
@@ -301,6 +515,68 @@ const Identity = () => {
               )}
             </div>
 
+            <div className="space-y-4">
+              {/* Sync Button */}
+              <Button
+                onClick={handleSyncProfile}
+                disabled={isSyncing || !isConnected || !onChainData}
+                className="w-full bg-gradient-to-r from-[#CA4A87] to-[#b13e74] hover:from-[#b13e74] hover:to-[#a0335f] text-white font-semibold"
+              >
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Syncing Profile...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Sync On-Chain Profile
+                  </>
+                )}
+              </Button>
+
+              {/* Status Messages */}
+              {syncStatus === "success" && (
+                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="text-green-800 dark:text-green-200 font-medium">
+                    {syncMessage}
+                  </span>
+                </div>
+              )}
+
+              {syncStatus === "error" && (
+                <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-800 dark:text-red-200 font-medium">
+                    {syncMessage}
+                  </span>
+                </div>
+              )}
+
+              {!isConnected && (
+                <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
+                  <span className="text-yellow-800 dark:text-yellow-200 font-medium">
+                    Please connect your wallet to sync your profile
+                  </span>
+                </div>
+              )}
+
+              {isConnected && !onChainData && (
+                <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <AlertCircle className="w-5 h-5 text-blue-600" />
+                  <span className="text-blue-800 dark:text-blue-200 font-medium">
+                    No on-chain profile found. Create a profile first.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-muted-foreground mb-4 text-sm">
+              Update your on-chain profile with the latest data from Decode
+            </p>
+
             <div>
               <h3 className="text-xl font-bold mb-6 border-b border-border pb-4">
                 Badges
@@ -315,6 +591,8 @@ const Identity = () => {
                 ))}
               </div>
             </div>
+
+            {/* Sync On-Chain Profile Section */}
           </div>
 
           {/* Social Accounts */}
