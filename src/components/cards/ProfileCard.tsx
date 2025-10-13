@@ -26,27 +26,46 @@ export const ProfileCard = ({
 
       try {
         setLoading(true);
+        console.log("🌐 Fetching avatar from IPFS hash:", avatar_ipfs_hash);
 
-        // Fetch avatar directly from custom IPFS node
-        console.log("🌐 Fetching avatar directly from custom IPFS node");
-        const ipfsUrl = `${
-          process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-          "http://35.247.142.76:8080/ipfs"
-        }/${avatar_ipfs_hash}`;
+        // Try multiple IPFS gateways with fallback (same as identity page)
+        const gateways = [
+          `${
+            process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
+            "http://35.247.142.76:8080/ipfs"
+          }/${avatar_ipfs_hash}`,
+          `https://ipfs.io/ipfs/${avatar_ipfs_hash}`,
+          `https://gateway.pinata.cloud/ipfs/${avatar_ipfs_hash}`,
+          `https://cloudflare-ipfs.com/ipfs/${avatar_ipfs_hash}`,
+        ];
 
-        const response = await fetch(ipfsUrl, {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
+        for (const gatewayUrl of gateways) {
+          try {
+            const response = await fetch(gatewayUrl, {
+              method: "HEAD", // Just check if the resource exists
+              signal: AbortSignal.timeout(5000),
+            });
 
-        if (response.ok) {
-          setAvatarUrl(ipfsUrl);
-          console.log("✅ Avatar loaded successfully:", ipfsUrl);
-        } else {
-          console.log("Avatar not found on IPFS, using default");
+            if (response.ok) {
+              setAvatarUrl(gatewayUrl);
+              console.log(
+                "✅ Avatar loaded successfully from IPFS:",
+                gatewayUrl
+              );
+              return;
+            }
+          } catch (error) {
+            console.warn(
+              `⚠️ Failed to fetch avatar from ${gatewayUrl}:`,
+              error
+            );
+            continue;
+          }
         }
+
+        console.log("❌ Avatar not found on any IPFS gateway, using default");
       } catch (error) {
-        console.error("Error fetching avatar from IPFS:", error);
+        console.error("❌ Error fetching avatar from IPFS:", error);
       } finally {
         setLoading(false);
       }
