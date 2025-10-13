@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BadgeCard } from "@/components/cards/BadgeCard";
+import { SocialAccountItem } from "@/components/cards/SocialAccountItem";
 import { X, Fingerprint } from "lucide-react";
 import Image from "next/image";
 import { useAccount, useWalletClient } from "wagmi";
@@ -52,6 +53,16 @@ interface UpdateProfileData {
   };
 }
 
+interface VerifiedSocialAccount {
+  id: string;
+  platform: string;
+  username: string;
+  account_id: string;
+  created_at: string;
+  updated_at: string;
+  status: string;
+}
+
 const Identity = () => {
   const [onChainData, setOnChainData] = useState<OnChainProfileData | null>(
     null
@@ -65,6 +76,15 @@ const Identity = () => {
     "idle"
   );
   const [syncMessage, setSyncMessage] = useState("");
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(
+    null
+  );
+  const [verifiedAccounts, setVerifiedAccounts] = useState<
+    VerifiedSocialAccount[]
+  >([]);
+  const [validatingAccount, setValidatingAccount] = useState<string | null>(
+    null
+  );
   const { address: connectedAddress, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
 
@@ -226,6 +246,11 @@ const Identity = () => {
 
     fetchAvatarFromIPFS();
   }, [onChainData?.profile_metadata?.avatar_ipfs_hash]);
+
+  // Fetch verified social accounts on component mount
+  useEffect(() => {
+    fetchVerifiedAccounts();
+  }, []);
 
   // Sync on-chain profile function
   const handleSyncProfile = async () => {
@@ -410,6 +435,112 @@ const Identity = () => {
     }
   };
 
+  // Fetch verified social accounts
+  const fetchVerifiedAccounts = async () => {
+    try {
+      console.log("🔍 Fetching verified social accounts...");
+      const backendUrl =
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+
+      const response = await fetch(
+        `${backendUrl}/api/v1/social/links?status=verified`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch verified accounts: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setVerifiedAccounts(data.data);
+        console.log("✅ Verified accounts fetched:", data.data);
+      } else {
+        console.log("No verified accounts found");
+        setVerifiedAccounts([]);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching verified accounts:", error);
+      setVerifiedAccounts([]);
+    }
+  };
+
+  // Social platform connection handlers
+  const handleSocialConnect = async (platform: string) => {
+    try {
+      setConnectingPlatform(platform);
+
+      const backendUrl =
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+
+      if (platform === "discord") {
+        // Get Discord OAuth URL
+        const response = await fetch(
+          `${backendUrl}/api/v1/social/discord/oauth-url?deid_session_id=${encodeURIComponent(
+            document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("deid_session_id="))
+              ?.split("=")[1] || ""
+          )}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to get ${platform} OAuth URL`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.oauth_url) {
+          // Open OAuth URL in new tab
+          window.open(data.oauth_url, "_blank", "noopener,noreferrer");
+          console.log(`✅ ${platform} OAuth URL opened:`, data.oauth_url);
+        } else {
+          throw new Error(`Invalid response for ${platform} OAuth`);
+        }
+      } else {
+        // Placeholder for other platforms
+        console.log(`🚧 ${platform} connection not implemented yet`);
+        alert(`${platform} connection will be implemented soon!`);
+      }
+    } catch (error) {
+      console.error(`❌ Error connecting ${platform}:`, error);
+      alert(`Failed to connect ${platform}. Please try again.`);
+    } finally {
+      setConnectingPlatform(null);
+    }
+  };
+
+  // Handle account validation
+  const handleValidateAccount = async (accountId: string) => {
+    try {
+      setValidatingAccount(accountId);
+      console.log(`🔍 Validating account: ${accountId}`);
+
+      // TODO: Implement on-chain validation logic here
+      // This will be implemented later as mentioned by the user
+
+      // For now, just show a placeholder message
+      alert(`Validation for account ${accountId} will be implemented soon!`);
+    } catch (error) {
+      console.error(`❌ Error validating account ${accountId}:`, error);
+      alert(`Failed to validate account. Please try again.`);
+    } finally {
+      setValidatingAccount(null);
+    }
+  };
+
   // Get wallet addresses from IPFS data
   const walletAddresses =
     onChainData?.profile_metadata?.wallets?.map((wallet) => wallet.address) ||
@@ -417,14 +548,8 @@ const Identity = () => {
   const primaryWalletAddress =
     onChainData?.profile_metadata?.primary_wallet?.address;
 
-  // Get social accounts from IPFS data
-  const socialAccounts =
-    onChainData?.socialAccounts?.map((account) => ({
-      id: account.accountId,
-      username: account.platform,
-      followers: 0, // Not available in current data structure
-      age: "Unknown", // Not available in current data structure
-    })) || [];
+  // Note: socialAccounts from IPFS data is no longer used
+  // We now fetch verified accounts directly from backend API
 
   const badges = Array(9).fill({
     title: "Golden Bitcoin Holder",
@@ -696,36 +821,137 @@ const Identity = () => {
               Social Accounts
             </h2>
 
-            <div className="space-y-3 max-h-[900px] overflow-y-auto pr-2">
-              {socialAccounts.length > 0 ? (
-                socialAccounts.map((account, i) => (
-                  <div
-                    key={i}
-                    className="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:border-primary transition-colors group"
-                  >
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">
-                        platform: {account.username}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        account id: {account.id}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        followers: {account.followers}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        account age: {account.age}
-                      </p>
-                    </div>
-                    <div className="bg-foreground text-background rounded-lg w-16 h-16 flex items-center justify-center group-hover:bg-destructive transition-colors cursor-pointer">
-                      <X className="w-8 h-8" />
-                    </div>
+            {/* Social Platform Icons */}
+            <div className="w-full bg-card border border-border rounded-xl p-8">
+              <div className="text-center mb-6">
+                <p className="text-sm text-muted-foreground">
+                  Choose Connected Platform
+                </p>
+              </div>
+              <div className="flex items-center justify-between max-w-2xl mx-auto">
+                <button
+                  onClick={() => handleSocialConnect("discord")}
+                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#5865F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={connectingPlatform !== null}
+                  title="Connect Discord"
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    {connectingPlatform === "discord" ? (
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    ) : (
+                      <Image
+                        src="/discord-icon.png"
+                        alt="Discord"
+                        width={32}
+                        height={32}
+                        className="w-8 h-8"
+                      />
+                    )}
                   </div>
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#5865F2] transition-colors">
+                    Discord
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleSocialConnect("twitter")}
+                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#1DA1F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={connectingPlatform !== null}
+                  title="Connect Twitter"
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    {connectingPlatform === "twitter" ? (
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    ) : (
+                      <Image
+                        src="/x-icon.png"
+                        alt="Twitter"
+                        width={32}
+                        height={32}
+                        className="w-8 h-8"
+                      />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#1DA1F2] transition-colors">
+                    Twitter
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleSocialConnect("github")}
+                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#333]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={connectingPlatform !== null}
+                  title="Connect GitHub"
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    {connectingPlatform === "github" ? (
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    ) : (
+                      <Image
+                        src="/github-icon.png"
+                        alt="GitHub"
+                        width={32}
+                        height={32}
+                        className="w-8 h-8"
+                      />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#333] transition-colors">
+                    GitHub
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleSocialConnect("telegram")}
+                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#0088cc]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={connectingPlatform !== null}
+                  title="Connect Telegram"
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    {connectingPlatform === "telegram" ? (
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    ) : (
+                      <Image
+                        src="/telegram-logo.png"
+                        alt="Telegram"
+                        width={32}
+                        height={32}
+                        className="w-8 h-8"
+                      />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#0088cc] transition-colors">
+                    Telegram
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Verified Social Accounts */}
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+              {verifiedAccounts.length > 0 ? (
+                verifiedAccounts.map((account) => (
+                  <SocialAccountItem
+                    key={account.id}
+                    platform={account.platform}
+                    username={account.username}
+                    account_id={account.account_id}
+                    created_at={account.created_at}
+                    onValidate={() => handleValidateAccount(account.id)}
+                    isValidating={validatingAccount === account.id}
+                  />
                 ))
               ) : (
-                <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-center">
-                  <p className="text-muted-foreground">
-                    No social accounts found
+                <div className="bg-card border border-border rounded-lg p-8 flex flex-col items-center justify-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <X className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground mb-2">
+                    No verified social accounts
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Connect and verify your social accounts above to see them
+                    here
                   </p>
                 </div>
               )}
