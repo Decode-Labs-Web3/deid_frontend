@@ -85,6 +85,7 @@ const Identity = () => {
   const [validatingAccount, setValidatingAccount] = useState<string | null>(
     null
   );
+  const [refreshingAccounts, setRefreshingAccounts] = useState(false);
   const { address: connectedAddress, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
 
@@ -250,6 +251,47 @@ const Identity = () => {
   // Fetch verified social accounts on component mount
   useEffect(() => {
     fetchVerifiedAccounts();
+  }, []);
+
+  // Detect when user returns to tab after OAuth verification
+  useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout;
+
+    const debouncedRefresh = () => {
+      // Clear any existing timeout
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+
+      // Set a new timeout to refresh after a short delay
+      refreshTimeout = setTimeout(() => {
+        console.log("🔄 Tab became active, refreshing verified accounts...");
+        fetchVerifiedAccounts(true); // Show refreshing indicator
+      }, 500); // 500ms delay to avoid excessive API calls
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        debouncedRefresh();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      debouncedRefresh();
+    };
+
+    // Add event listeners for tab visibility and window focus
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+
+    // Cleanup event listeners and timeout on component unmount
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+    };
   }, []);
 
   // Sync on-chain profile function
@@ -436,8 +478,11 @@ const Identity = () => {
   };
 
   // Fetch verified social accounts
-  const fetchVerifiedAccounts = async () => {
+  const fetchVerifiedAccounts = async (showRefreshing = false) => {
     try {
+      if (showRefreshing) {
+        setRefreshingAccounts(true);
+      }
       console.log("🔍 Fetching verified social accounts...");
       const backendUrl =
         process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
@@ -469,6 +514,10 @@ const Identity = () => {
     } catch (error) {
       console.error("❌ Error fetching verified accounts:", error);
       setVerifiedAccounts([]);
+    } finally {
+      if (showRefreshing) {
+        setRefreshingAccounts(false);
+      }
     }
   };
 
@@ -484,6 +533,35 @@ const Identity = () => {
         // Get Discord OAuth URL
         const response = await fetch(
           `${backendUrl}/api/v1/social/discord/oauth-url?deid_session_id=${encodeURIComponent(
+            document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("deid_session_id="))
+              ?.split("=")[1] || ""
+          )}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to get ${platform} OAuth URL`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.oauth_url) {
+          // Open OAuth URL in new tab
+          window.open(data.oauth_url, "_blank", "noopener,noreferrer");
+          console.log(`✅ ${platform} OAuth URL opened:`, data.oauth_url);
+        } else {
+          throw new Error(`Invalid response for ${platform} OAuth`);
+        }
+      } else if (platform === "github") {
+        // Get GitHub OAuth URL
+        const response = await fetch(
+          `${backendUrl}/api/v1/social/github/oauth-url?deid_session_id=${encodeURIComponent(
             document.cookie
               .split("; ")
               .find((row) => row.startsWith("deid_session_id="))
@@ -835,18 +913,28 @@ const Identity = () => {
                   disabled={connectingPlatform !== null}
                   title="Connect Discord"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                    {connectingPlatform === "discord" ? (
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    ) : (
-                      <Image
-                        src="/discord-icon.png"
-                        alt="Discord"
-                        width={32}
-                        height={32}
-                        className="w-8 h-8"
-                      />
-                    )}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                    <span
+                      className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #F43F5E 0%, #F472B6 50%, #fff 100%)",
+                        filter: "blur(12px)",
+                      }}
+                    />
+                    <span className="relative z-10">
+                      {connectingPlatform === "discord" ? (
+                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                      ) : (
+                        <Image
+                          src="/discord-icon.png"
+                          alt="Discord"
+                          width={32}
+                          height={32}
+                          className="w-8 h-8"
+                        />
+                      )}
+                    </span>
                   </div>
                   <span className="text-sm font-medium text-muted-foreground group-hover:text-[#5865F2] transition-colors">
                     Discord
@@ -859,20 +947,30 @@ const Identity = () => {
                   disabled={connectingPlatform !== null}
                   title="Connect Twitter"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                    {connectingPlatform === "twitter" ? (
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    ) : (
-                      <Image
-                        src="/x-icon.png"
-                        alt="Twitter"
-                        width={32}
-                        height={32}
-                        className="w-8 h-8"
-                      />
-                    )}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                    <span
+                      className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #F43F5E 0%, #F472B6 50%, #fff 100%)",
+                        filter: "blur(12px)",
+                      }}
+                    />
+                    <span className="relative z-10">
+                      {connectingPlatform === "twitter" ? (
+                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                      ) : (
+                        <Image
+                          src="/x-icon.png"
+                          alt="Twitter"
+                          width={32}
+                          height={32}
+                          className="w-8 h-8"
+                        />
+                      )}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#1DA1F2] transition-colors">
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#0088cc] transition-colors">
                     Twitter
                   </span>
                 </button>
@@ -883,20 +981,30 @@ const Identity = () => {
                   disabled={connectingPlatform !== null}
                   title="Connect GitHub"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                    {connectingPlatform === "github" ? (
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    ) : (
-                      <Image
-                        src="/github-icon.png"
-                        alt="GitHub"
-                        width={32}
-                        height={32}
-                        className="w-8 h-8"
-                      />
-                    )}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                    <span
+                      className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #F43F5E 0%, #F472B6 50%, #fff 100%)",
+                        filter: "blur(12px)",
+                      }}
+                    />
+                    <span className="relative z-10">
+                      {connectingPlatform === "github" ? (
+                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                      ) : (
+                        <Image
+                          src="/github-icon.png"
+                          alt="GitHub"
+                          width={32}
+                          height={32}
+                          className="w-8 h-8"
+                        />
+                      )}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#333] transition-colors">
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#0088cc] transition-colors">
                     GitHub
                   </span>
                 </button>
@@ -907,18 +1015,28 @@ const Identity = () => {
                   disabled={connectingPlatform !== null}
                   title="Connect Telegram"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                    {connectingPlatform === "telegram" ? (
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    ) : (
-                      <Image
-                        src="/telegram-logo.png"
-                        alt="Telegram"
-                        width={32}
-                        height={32}
-                        className="w-8 h-8"
-                      />
-                    )}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                    <span
+                      className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #F43F5E 0%, #F472B6 50%, #fff 100%)",
+                        filter: "blur(12px)",
+                      }}
+                    />
+                    <span className="relative z-10">
+                      {connectingPlatform === "telegram" ? (
+                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                      ) : (
+                        <Image
+                          src="/telegram-logo.png"
+                          alt="Telegram"
+                          width={32}
+                          height={32}
+                          className="w-8 h-8"
+                        />
+                      )}
+                    </span>
                   </div>
                   <span className="text-sm font-medium text-muted-foreground group-hover:text-[#0088cc] transition-colors">
                     Telegram
@@ -929,6 +1047,15 @@ const Identity = () => {
 
             {/* Verified Social Accounts */}
             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+              {refreshingAccounts && (
+                <div className="flex items-center justify-center p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-600" />
+                  <span className="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                    Refreshing accounts...
+                  </span>
+                </div>
+              )}
+
               {verifiedAccounts.length > 0 ? (
                 verifiedAccounts.map((account) => (
                   <SocialAccountItem
