@@ -900,10 +900,12 @@ const Identity = () => {
             </h2>
 
             {/* Social Platform Icons */}
-            <div className="w-full bg-card border border-border rounded-xl p-8">
-              <div className="text-center mb-6">
-                <p className="text-sm text-muted-foreground">
-                  Choose Connected Platform
+            <div className="w-full bg-card border border-border rounded-xl p-2">
+              <div className="text-center mb-2">
+                <p className="text-md text-muted-foreground">
+                  <span className="font-semibold">
+                    Choose Connected Platform
+                  </span>
                 </p>
               </div>
               <div className="flex items-center justify-between max-w-2xl mx-auto">
@@ -936,9 +938,6 @@ const Identity = () => {
                       )}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#5865F2] transition-colors">
-                    Discord
-                  </span>
                 </button>
 
                 <button
@@ -970,9 +969,6 @@ const Identity = () => {
                       )}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#0088cc] transition-colors">
-                    Twitter
-                  </span>
                 </button>
 
                 <button
@@ -1004,9 +1000,6 @@ const Identity = () => {
                       )}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#0088cc] transition-colors">
-                    GitHub
-                  </span>
                 </button>
 
                 <button
@@ -1038,23 +1031,13 @@ const Identity = () => {
                       )}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground group-hover:text-[#0088cc] transition-colors">
-                    Telegram
-                  </span>
                 </button>
               </div>
             </div>
 
             {/* Verified Social Accounts */}
             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-              {refreshingAccounts && (
-                <div className="flex items-center justify-center p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-600" />
-                  <span className="text-blue-800 dark:text-blue-200 text-sm font-medium">
-                    Refreshing accounts...
-                  </span>
-                </div>
-              )}
+              {refreshingAccounts}
 
               {verifiedAccounts.length > 0 ? (
                 verifiedAccounts.map((account) => (
