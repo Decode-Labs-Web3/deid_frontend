@@ -888,8 +888,10 @@ const Identity = () => {
               {syncStatus === "error" && (
                 <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
                   <AlertCircle className="w-5 h-5 text-red-600" />
-                  <span className="text-red-800 dark:text-red-200 font-medium">
-                    {syncMessage}
+                  <span className="text-red-800 dark:text-red-200 text-xs break-words">
+                    {syncMessage.length > 250
+                      ? syncMessage.slice(0, 170) + "…"
+                      : syncMessage}
                   </span>
                 </div>
               )}
