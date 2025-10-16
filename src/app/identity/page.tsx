@@ -616,6 +616,35 @@ const Identity = () => {
         } else {
           throw new Error(`Invalid response for ${platform} OAuth`);
         }
+      } else if (platform === "facebook") {
+        // Get Facebook OAuth URL
+        const response = await fetch(
+          `${backendUrl}/api/v1/social/facebook/oauth-url?deid_session_id=${encodeURIComponent(
+            document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("deid_session_id="))
+              ?.split("=")[1] || ""
+          )}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to get ${platform} OAuth URL`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.oauth_url) {
+          // Open OAuth URL in new tab
+          window.open(data.oauth_url, "_blank", "noopener,noreferrer");
+          console.log(`✅ ${platform} OAuth URL opened:`, data.oauth_url);
+        } else {
+          throw new Error(`Invalid response for ${platform} OAuth`);
+        }
       } else {
         // Placeholder for other platforms
         console.log(`🚧 ${platform} connection not implemented yet`);
@@ -929,22 +958,22 @@ const Identity = () => {
             </h2>
 
             {/* Social Platform Icons */}
-            <div className="w-full bg-card border border-border rounded-xl p-2">
-              <div className="text-center mb-2">
+            <div className="w-full bg-card border border-border rounded-xl p-4">
+              <div className="text-center mb-4">
                 <p className="text-md text-muted-foreground">
                   <span className="font-semibold">
                     Choose Connected Platform
                   </span>
                 </p>
               </div>
-              <div className="flex items-center justify-between max-w-2xl mx-auto">
+              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3 max-w-2xl mx-auto">
                 <button
                   onClick={() => handleSocialConnect("discord")}
-                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#5865F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#5865F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                   disabled={connectingPlatform !== null}
                   title="Connect Discord"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
                     <span
                       className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
                       style={{
@@ -955,14 +984,14 @@ const Identity = () => {
                     />
                     <span className="relative z-10">
                       {connectingPlatform === "discord" ? (
-                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                        <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6 text-white animate-spin" />
                       ) : (
                         <Image
                           src="/discord-icon.png"
                           alt="Discord"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
                         />
                       )}
                     </span>
@@ -971,11 +1000,11 @@ const Identity = () => {
 
                 <button
                   onClick={() => handleSocialConnect("twitter")}
-                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#1DA1F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#1DA1F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                   disabled={connectingPlatform !== null}
                   title="Connect Twitter"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
                     <span
                       className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
                       style={{
@@ -986,14 +1015,14 @@ const Identity = () => {
                     />
                     <span className="relative z-10">
                       {connectingPlatform === "twitter" ? (
-                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                        <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6 text-white animate-spin" />
                       ) : (
                         <Image
                           src="/x-icon.png"
                           alt="Twitter"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
                         />
                       )}
                     </span>
@@ -1002,11 +1031,11 @@ const Identity = () => {
 
                 <button
                   onClick={() => handleSocialConnect("github")}
-                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#333]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#333]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                   disabled={connectingPlatform !== null}
                   title="Connect GitHub"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
                     <span
                       className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
                       style={{
@@ -1017,14 +1046,14 @@ const Identity = () => {
                     />
                     <span className="relative z-10">
                       {connectingPlatform === "github" ? (
-                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                        <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6 text-white animate-spin" />
                       ) : (
                         <Image
                           src="/github-icon.png"
                           alt="GitHub"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
                         />
                       )}
                     </span>
@@ -1033,11 +1062,11 @@ const Identity = () => {
 
                 <button
                   onClick={() => handleSocialConnect("google")}
-                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#4285F4]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#4285F4]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                   disabled={connectingPlatform !== null}
                   title="Connect Google"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-white flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
                     <span
                       className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
                       style={{
@@ -1048,14 +1077,45 @@ const Identity = () => {
                     />
                     <span className="relative z-10">
                       {connectingPlatform === "google" ? (
-                        <Loader2 className="w-8 h-8 text-gray-600 animate-spin" />
+                        <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6 text-white animate-spin" />
                       ) : (
                         <Image
                           src="/google_logo.png"
                           alt="Google"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
+                        />
+                      )}
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleSocialConnect("facebook")}
+                  className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#1877F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                  disabled={connectingPlatform !== null}
+                  title="Connect Facebook"
+                >
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                    <span
+                      className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #F43F5E 0%, #F472B6 50%, #fff 100%)",
+                        filter: "blur(12px)",
+                      }}
+                    />
+                    <span className="relative z-10">
+                      {connectingPlatform === "facebook" ? (
+                        <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6 text-white animate-spin" />
+                      ) : (
+                        <Image
+                          src="/facebook-icon.png"
+                          alt="Facebook"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
                         />
                       )}
                     </span>
@@ -1064,11 +1124,11 @@ const Identity = () => {
 
                 <button
                   onClick={() => handleSocialConnect("telegram")}
-                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#0088cc]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#0088cc]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                   disabled={connectingPlatform !== null}
                   title="Connect Telegram"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
                     <span
                       className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
                       style={{
@@ -1079,14 +1139,14 @@ const Identity = () => {
                     />
                     <span className="relative z-10">
                       {connectingPlatform === "telegram" ? (
-                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                        <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6 text-white animate-spin" />
                       ) : (
                         <Image
                           src="/telegram-logo.png"
                           alt="Telegram"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
                         />
                       )}
                     </span>

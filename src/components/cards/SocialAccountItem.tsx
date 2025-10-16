@@ -20,6 +20,10 @@ const getPlatformIcon = (platform: string) => {
       return "/x-icon.png";
     case "github":
       return "/github-icon.png";
+    case "google":
+      return "/google_logo.png";
+    case "facebook":
+      return "/facebook-icon.png";
     case "telegram":
       return "/telegram-logo.png";
     default:
@@ -36,6 +40,10 @@ const getPlatformName = (platform: string) => {
       return "Twitter";
     case "github":
       return "GitHub";
+    case "google":
+      return "Google";
+    case "facebook":
+      return "Facebook";
     case "telegram":
       return "Telegram";
     default:

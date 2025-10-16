@@ -36,6 +36,11 @@ export const StreakTracker = () => {
   const fetchStreakInfo = useCallback(async () => {
     if (!connectedAddress || !walletClient) return;
 
+    if (!STREAK_TRACKER_ADDRESS) {
+      setError("Streak tracker contract address not configured");
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -81,6 +86,11 @@ export const StreakTracker = () => {
   const handleCheckIn = async () => {
     if (!connectedAddress || !walletClient || !streakInfo?.canCheckInToday)
       return;
+
+    if (!STREAK_TRACKER_ADDRESS) {
+      setError("Streak tracker contract address not configured");
+      return;
+    }
 
     try {
       setIsCheckingIn(true);
@@ -186,10 +196,11 @@ export const StreakTracker = () => {
     );
   }
 
-  const { streak, canCheckInToday } = streakInfo;
-  const progressPercentage = Math.min((streak.currentStreak / 1000) * 100, 100);
+  const { streak, canCheckInToday, daysSinceLastCheckIn } = streakInfo;
+  const hasLostStreak = daysSinceLastCheckIn > 1;
+  const progressPercentage = Math.min((streak.currentStreak / 100) * 100, 100);
   const longestStreakPercentage = Math.min(
-    (streak.longestStreak / 1000) * 100,
+    (streak.longestStreak / 100) * 100,
     100
   );
 
@@ -224,7 +235,9 @@ export const StreakTracker = () => {
       <div className="relative mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium">Current Streak</span>
-          <span className="text-sm font-bold">{streak.currentStreak} days</span>
+          <span className="text-sm font-bold">
+            {streak.currentStreak} / 100 days
+          </span>
         </div>
 
         <div className="relative h-3 bg-background/50 rounded-full overflow-hidden">
@@ -262,7 +275,12 @@ export const StreakTracker = () => {
       {/* Check-in Button */}
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground">
-          {canCheckInToday ? (
+          {hasLostStreak ? (
+            <span className="text-orange-600 dark:text-orange-400 font-medium">
+              You have not checked in for {daysSinceLastCheckIn} days. Start a
+              new streak today!
+            </span>
+          ) : canCheckInToday ? (
             <span className="text-green-600 dark:text-green-400">
               Ready to check in!
             </span>
@@ -285,7 +303,7 @@ export const StreakTracker = () => {
           ) : (
             <>
               <Calendar className="w-4 h-4 mr-2" />
-              Check In
+              {hasLostStreak ? "Start New Streak" : "Check In"}
             </>
           )}
         </Button>

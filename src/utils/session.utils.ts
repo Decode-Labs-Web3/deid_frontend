@@ -4,6 +4,8 @@ export const getSessionId = (): string | null => {
   if (typeof document === "undefined") return null;
 
   const cookies = document.cookie.split(";");
+
+  console.log("Cookies:", cookies);
   const sessionCookie = cookies.find((cookie) =>
     cookie.trim().startsWith("deid_session_id=")
   );
