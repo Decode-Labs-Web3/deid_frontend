@@ -587,6 +587,35 @@ const Identity = () => {
         } else {
           throw new Error(`Invalid response for ${platform} OAuth`);
         }
+      } else if (platform === "google") {
+        // Get Google OAuth URL
+        const response = await fetch(
+          `${backendUrl}/api/v1/social/google/oauth-url?deid_session_id=${encodeURIComponent(
+            document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("deid_session_id="))
+              ?.split("=")[1] || ""
+          )}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to get ${platform} OAuth URL`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.oauth_url) {
+          // Open OAuth URL in new tab
+          window.open(data.oauth_url, "_blank", "noopener,noreferrer");
+          console.log(`✅ ${platform} OAuth URL opened:`, data.oauth_url);
+        } else {
+          throw new Error(`Invalid response for ${platform} OAuth`);
+        }
       } else {
         // Placeholder for other platforms
         console.log(`🚧 ${platform} connection not implemented yet`);
@@ -993,6 +1022,37 @@ const Identity = () => {
                         <Image
                           src="/github-icon.png"
                           alt="GitHub"
+                          width={32}
+                          height={32}
+                          className="w-8 h-8"
+                        />
+                      )}
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleSocialConnect("google")}
+                  className="group flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-[#4285F4]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={connectingPlatform !== null}
+                  title="Connect Google"
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-white flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                    <span
+                      className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #F43F5E 0%, #F472B6 50%, #fff 100%)",
+                        filter: "blur(12px)",
+                      }}
+                    />
+                    <span className="relative z-10">
+                      {connectingPlatform === "google" ? (
+                        <Loader2 className="w-8 h-8 text-gray-600 animate-spin" />
+                      ) : (
+                        <Image
+                          src="/google_logo.png"
+                          alt="Google"
                           width={32}
                           height={32}
                           className="w-8 h-8"
