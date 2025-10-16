@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
 import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
+import { IPFSLoadingAnimation } from "@/components/common/IPFSLoadingAnimation";
 
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
@@ -698,15 +699,7 @@ const Identity = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading identity...</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Fetching data from IPFS using ipfs.utils.ts
-            </p>
-          </div>
-        </div>
+        <IPFSLoadingAnimation />
       </AppLayout>
     );
   }

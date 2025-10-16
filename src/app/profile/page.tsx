@@ -11,6 +11,7 @@ import { NFTCard } from "@/components/cards/NFTCard";
 import { checkOnChainProfile, OnChainProfileData } from "@/utils/onchain.utils";
 import { getPrimaryWalletAddress } from "@/utils/session.utils";
 import { useRouter } from "next/navigation";
+import { IPFSLoadingAnimation } from "@/components/common/IPFSLoadingAnimation";
 
 interface PrimaryWallet {
   _id: string;
@@ -211,15 +212,7 @@ const Profile = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading profile...</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Fetching user data from backend and on-chain profile
-            </p>
-          </div>
-        </div>
+        <IPFSLoadingAnimation />
       </AppLayout>
     );
   }
