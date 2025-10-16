@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
 import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
-import { IPFSLoadingAnimation } from "@/components/common/IPFSLoadingAnimation";
+import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
@@ -705,33 +705,12 @@ const Identity = () => {
   }
 
   if (error) {
-    const isWalletError = error.includes("connect your wallet");
-
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="text-destructive text-lg mb-4">
-              Error loading identity
-            </div>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <div className="flex gap-3 justify-center">
-              {isWalletError ? (
-                <p className="text-sm text-muted-foreground">
-                  Please connect your wallet using the button in the top right
-                  corner
-                </p>
-              ) : (
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                >
-                  Retry
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <IPFSErrorAnimation
+          errorMessage={error}
+          onRetry={() => window.location.reload()}
+        />
       </AppLayout>
     );
   }
@@ -932,7 +911,7 @@ const Identity = () => {
               <h3 className="text-xl font-bold mb-6 border-b border-border pb-4">
                 Badges
               </h3>
-              <div className="grid grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2">
+              <div className="grid grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {badges.map((badge, i) => (
                   <BadgeCard
                     key={i}
@@ -1151,7 +1130,7 @@ const Identity = () => {
             </div>
 
             {/* Verified Social Accounts */}
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[750px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {refreshingAccounts}
 
               {verifiedAccounts.length > 0 ? (

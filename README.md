@@ -10,6 +10,10 @@ This project lets users manage their identity securely and privately on the bloc
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
+- **UI Components**: Radix UI, Shadcn/ui
+- **Animations**: Framer Motion
+- **Blockchain**: Ethers.js, Wagmi, RainbowKit
+- **Authentication**: OAuth 2.0 (Facebook, Discord, GitHub, Google)
 - **Linting**: ESLint
 - **Package Manager**: npm
 
@@ -59,12 +63,36 @@ deid_frontend/
 └── next.config.js          # Next.js configuration
 ```
 
+## Features
+
+- 🎨 **Beautiful Animations**: Progressive IPFS loading and error states with Framer Motion
+- 🔐 **Social Login**: OAuth 2.0 integration with Facebook, Discord, GitHub, Google
+- ⛓️ **Blockchain Identity**: On-chain profile management with IPFS storage
+- 🔄 **Auto-Refresh**: Automatic account verification updates
+- 📱 **Responsive Design**: Mobile-first UI with modern aesthetics
+- 🛡️ **Secure**: Session-based authentication with cryptographic signatures
+
 ## Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+
+## Documentation
+
+### Guides
+
+- 📱 [SOCIAL_LOGIN.md](./SOCIAL_LOGIN.md) - OAuth 2.0 social login implementation
+- 🎨 [Animation Components](./src/components/common/README.md) - IPFS loading & error animations
+- 📄 [Component Documentation](./src/components/) - UI component library
+
+### Demo Pages
+
+- `/animation-demo` - Interactive animation showcase
+- `/identity` - Decentralized identity & social accounts
+- `/profile` - User profile with NFT collections
+- `/create-account` - On-chain profile creation
 
 ## Learn More
 
@@ -73,6 +101,8 @@ To learn more about the technologies used:
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs) - utility-first CSS framework
 - [TypeScript Documentation](https://www.typescriptlang.org/docs/) - typed JavaScript
+- [Framer Motion](https://www.framer.com/motion/) - animation library
+- [Ethers.js](https://docs.ethers.org/) - Ethereum library
 
 ## Contributing
 

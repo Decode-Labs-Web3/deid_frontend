@@ -91,7 +91,9 @@ export const fetchProfileMetadataFromIPFS = async (
  * @param metadataDict - Raw metadata from IPFS
  * @returns ProfileMetadata
  */
-const parseProfileMetadata = (metadataDict: any): ProfileMetadata => {
+const parseProfileMetadata = (
+  metadataDict: Record<string, unknown>
+): ProfileMetadata => {
   try {
     // Handle nested data structure if present
     const data = metadataDict.data || metadataDict;

@@ -11,7 +11,7 @@ import { NFTCard } from "@/components/cards/NFTCard";
 import { checkOnChainProfile, OnChainProfileData } from "@/utils/onchain.utils";
 import { getPrimaryWalletAddress } from "@/utils/session.utils";
 import { useRouter } from "next/navigation";
-import { IPFSLoadingAnimation } from "@/components/common/IPFSLoadingAnimation";
+import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 
 interface PrimaryWallet {
   _id: string;
@@ -220,22 +220,10 @@ const Profile = () => {
   if (error) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="text-destructive text-lg mb-4">
-              Error loading profile
-            </div>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        </div>
+        <IPFSErrorAnimation
+          errorMessage={error}
+          onRetry={() => window.location.reload()}
+        />
       </AppLayout>
     );
   }
