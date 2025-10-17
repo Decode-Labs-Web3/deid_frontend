@@ -10,9 +10,11 @@ import {
   Vote,
   Settings,
   LogOut,
+  Shield,
 } from "lucide-react";
 import Image from "next/image";
-import { logout } from "@/utils/session.utils";
+import { logout, isAdmin } from "@/utils/session.utils";
+import { useState, useEffect } from "react";
 
 const navigationItems = [
   { name: "Profile", path: "/profile", icon: User },
@@ -25,6 +27,12 @@ const navigationItems = [
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Check admin status on mount and when pathname changes
+    setUserIsAdmin(isAdmin());
+  }, [pathname]);
 
   return (
     <div className="w-55 bg-sidebar border-r border-sidebar-border flex flex-col h-screen fixed left-0 top-0">
@@ -33,7 +41,7 @@ export const Sidebar = () => {
         <span className="text-2xl font-bold tracking-tight">DEiD</span>
       </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
@@ -53,6 +61,24 @@ export const Sidebar = () => {
             </Link>
           );
         })}
+
+        {/* Admin Dashboard Link - Only visible to admins */}
+        {userIsAdmin && (
+          <>
+            <div className="my-4 border-t border-sidebar-border/50" />
+            <Link
+              href="/admin"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                pathname === "/admin"
+                  ? "bg-gradient-to-r from-pink-500/20 to-pink-600/20 border-l-4 border-pink-500 text-pink-500 font-semibold"
+                  : "text-pink-400 hover:bg-pink-500/10 hover:text-pink-500"
+              }`}
+            >
+              <Shield className="w-6 h-6" />
+              <span className="text-sm">Admin Dashboard</span>
+            </Link>
+          </>
+        )}
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">

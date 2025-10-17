@@ -136,7 +136,7 @@ const Identity = () => {
         const userProfile = backendData.data;
         console.log("✅ Backend user data fetched:", userProfile);
 
-        // Step 2: Store primary wallet address in sessionStorage
+        // Step 2: Store primary wallet address and user role in sessionStorage
         if (userProfile.primary_wallet?.address) {
           sessionStorage.setItem(
             "primaryWalletAddress",
@@ -146,6 +146,12 @@ const Identity = () => {
             "💾 Primary wallet stored:",
             userProfile.primary_wallet.address
           );
+        }
+
+        // Store user role if available
+        if (userProfile.role) {
+          sessionStorage.setItem("userRole", userProfile.role);
+          console.log("💾 User role stored:", userProfile.role);
         }
 
         // Step 3: Get primary wallet address (from sessionStorage or backend)
