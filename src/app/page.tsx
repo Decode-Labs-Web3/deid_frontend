@@ -36,6 +36,13 @@ const Loading = () => {
               "✅ Session cookie is WORKING! Backend authenticated successfully"
             );
             console.log("👤 User data:", data.data);
+
+            // Store user role if available
+            if (data.data?.role) {
+              sessionStorage.setItem("userRole", data.data.role);
+              console.log("💾 User role stored:", data.data.role);
+            }
+
             console.log("➡️  Redirecting to /profile");
 
             // Wait a moment to show the logo, then redirect

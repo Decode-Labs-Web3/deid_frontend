@@ -18,8 +18,7 @@ import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 import { toastInfo, toastError, toastSuccess } from "@/utils/toast.utils";
 
 // Contract configuration - using environment variable or fallback
-const PROXY_ADDRESS =
-  process.env.PROXY_ADDRESS || "0x76050bee51946D027B5548d97C6166e08e5a2B1C";
+const PROXY_ADDRESS = process.env.PROXY_ADDRESS;
 
 interface UpdateProfileData {
   method: string;
