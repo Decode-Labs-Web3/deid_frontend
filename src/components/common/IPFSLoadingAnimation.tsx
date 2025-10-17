@@ -13,7 +13,7 @@ interface LoadingStep {
 const loadingSteps: LoadingStep[] = [
   {
     icon: <Database className="w-6 h-6" />,
-    text: "Connecting to IPFS network...",
+    text: "Connecting to Blockchain and IPFS network...",
     delay: 0,
   },
   {

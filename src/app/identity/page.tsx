@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BadgeCard } from "@/components/cards/BadgeCard";
 import { SocialAccountItem } from "@/components/cards/SocialAccountItem";
@@ -18,7 +19,9 @@ import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 import { toastInfo, toastError, toastSuccess } from "@/utils/toast.utils";
 
 // Contract configuration - using environment variable or fallback
-const PROXY_ADDRESS = process.env.PROXY_ADDRESS;
+const PROXY_ADDRESS =
+  process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
+  "0x2cDf115BB5ba6cd3d570F6cd1E98147078c9Da99";
 
 interface UpdateProfileData {
   method: string;
@@ -73,6 +76,7 @@ interface VerifiedSocialAccount {
 }
 
 const Identity = () => {
+  const router = useRouter();
   const [onChainData, setOnChainData] = useState<OnChainProfileData | null>(
     null
   );
@@ -168,7 +172,11 @@ const Identity = () => {
         const onChainProfile = await checkOnChainProfile(primaryWalletAddress);
 
         if (!onChainProfile) {
-          throw new Error("No on-chain profile found for this wallet address");
+          console.log(
+            "❌ No on-chain profile found, redirecting to create-account"
+          );
+          router.push("/create-account");
+          return;
         }
 
         console.log(
@@ -402,7 +410,9 @@ const Identity = () => {
           DEID_PROFILE_ABI.bytecode,
           signer
         );
-        contract = DEiDProfileFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+        contract = DEiDProfileFactory.attach(
+          PROXY_ADDRESS as string
+        ) as ethers.Contract;
 
         // Test if this ABI works
         await contract.getProfile(connectedAddress);
@@ -416,7 +426,9 @@ const Identity = () => {
           DEID_PROXY_ABI.bytecode,
           signer
         );
-        contract = DEiDProxyFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+        contract = DEiDProxyFactory.attach(
+          PROXY_ADDRESS as string
+        ) as ethers.Contract;
         console.log("✅ Using DEiDProxy ABI");
       }
 
@@ -512,7 +524,7 @@ const Identity = () => {
 
       // Use proxy address with DEiDProfile ABI (Diamond pattern)
       const contract = new ethers.Contract(
-        PROXY_ADDRESS,
+        PROXY_ADDRESS as string,
         DEID_PROFILE_ABI.abi,
         provider
       );
@@ -775,7 +787,7 @@ const Identity = () => {
 
       // Use proxy address with DEiDProfile ABI (Diamond pattern)
       const contract = new ethers.Contract(
-        PROXY_ADDRESS,
+        PROXY_ADDRESS as string,
         DEID_PROFILE_ABI.abi,
         signer
       );
@@ -931,7 +943,17 @@ const Identity = () => {
                     "Unknown User"}
                 </h3>
                 <p className="text-muted-foreground">
-                  @{onChainData?.profile_metadata?.username || "unknown"}
+                  @{onChainData?.profile_metadata?.username || "unknown"}{" "}
+                  <span
+                    className="text-sm ml-1 font-bold"
+                    style={{
+                      color: "#ff72e1",
+                      textShadow:
+                        "0 0 1px #ff72e1, 0 0 1px #ffb6f9, 0 0 1px #e75480",
+                    }}
+                  >
+                    .deid
+                  </span>
                 </p>
                 {onChainData?.profile_metadata?.bio && (
                   <p className="text-sm text-muted-foreground mt-2">

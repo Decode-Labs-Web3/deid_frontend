@@ -120,7 +120,18 @@ export const ProfileCard = ({
 
       <div className="flex-1">
         <h2 className="text-3xl font-bold mb-1">{display_name || "User"}</h2>
-        <p className="text-muted-foreground mb-2">@{username || "username"}</p>
+        <p className="text-muted-foreground mb-2">
+          @{username || "username"}
+          <span
+            className="text-sm ml-1 font-bold"
+            style={{
+              color: "#ff72e1",
+              textShadow: "0 0 1px #ff72e1, 0 0 1px #ffb6f9, 0 0 1px #e75480",
+            }}
+          >
+            .deid
+          </span>
+        </p>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
           {bio || "No bio available"}
