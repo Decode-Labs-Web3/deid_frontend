@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Sparkles, AlertTriangle } from "lucide-react";
+import { toastSuccess } from "@/utils/toast.utils";
 
 export default function AnimationDemo() {
   const [showLoading, setShowLoading] = useState(false);
@@ -96,7 +97,7 @@ export default function AnimationDemo() {
             <IPFSErrorAnimation
               errorMessage="Failed to connect to IPFS gateway. The network might be experiencing high traffic or your internet connection is unstable."
               onRetry={() => {
-                alert("Retry button clicked!");
+                toastSuccess("Retrying IPFS connection...");
                 setShowError(false);
               }}
             />

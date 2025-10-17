@@ -1,12 +1,34 @@
-// Simple toast utility functions
+import { toast } from "@/hooks/use-toast";
+
+// Toast utility functions using shadcn/ui toast
 export const toastError = (message: string) => {
   console.error("Toast Error:", message);
-  // You can implement a proper toast system here later
-  alert(`Error: ${message}`);
+  toast({
+    variant: "destructive",
+    title: "Error",
+    description: message,
+  });
 };
 
-export const toastSuccess = (message: string) => {
+export const toastSuccess = (message: string, title = "Success") => {
   console.log("Toast Success:", message);
-  // You can implement a proper toast system here later
-  alert(`Success: ${message}`);
+  toast({
+    title,
+    description: message,
+  });
+};
+
+export const toastInfo = (message: string, title = "Info") => {
+  toast({
+    title,
+    description: message,
+  });
+};
+
+export const toastWarning = (message: string, title = "Warning") => {
+  toast({
+    title,
+    description: message,
+    variant: "default",
+  });
 };

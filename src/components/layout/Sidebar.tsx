@@ -27,7 +27,7 @@ export const Sidebar = () => {
   const pathname = usePathname();
 
   return (
-    <div className="w-52 bg-sidebar border-r border-sidebar-border flex flex-col h-screen fixed left-0 top-0">
+    <div className="w-55 bg-sidebar border-r border-sidebar-border flex flex-col h-screen fixed left-0 top-0">
       <div className="p-6 flex items-center gap-3">
         <Image src="/deid_logo_noname.png" alt="DEiD" width={40} height={40} />
         <span className="text-2xl font-bold tracking-tight">DEiD</span>
@@ -48,7 +48,7 @@ export const Sidebar = () => {
                   : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-6 h-6" />
               <span className="text-sm">{item.name}</span>
             </Link>
           );
@@ -56,18 +56,19 @@ export const Sidebar = () => {
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <Fingerprint className="w-8 h-8 text-primary" />
+        <div className="flex items-center gap-2 px-4 py-3">
+          <Fingerprint className="w-13 h-13 text-primary" />
           <div className="flex flex-col flex-1">
-            <span className="text-sm font-semibold">Son Nguyen</span>
-            <span className="text-xs text-muted-foreground">@PasonDev</span>
+            <span className="text-xs text-muted-foreground">
+              By Decode Labs
+            </span>
           </div>
           <button
             onClick={logout}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded-lg transition-all"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded-lg transition-all hover:shadow-[0_0_8px_2px_rgba(202,74,135,0.5)]"
             title="Logout"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-5 h-8" />
           </button>
         </div>
       </div>

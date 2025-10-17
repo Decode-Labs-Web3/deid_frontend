@@ -15,6 +15,7 @@ import { Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
 import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
 import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
+import { toastInfo, toastError, toastSuccess } from "@/utils/toast.utils";
 
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
@@ -56,12 +57,20 @@ interface UpdateProfileData {
 
 interface VerifiedSocialAccount {
   id: string;
+  user_id: string;
   platform: string;
   username: string;
   account_id: string;
+  email: string | null;
+  display_name: string;
+  avatar_url: string;
+  signature: string;
+  verification_hash: string;
+  status: string;
+  tx_hash: string | null;
+  block_number: number | null;
   created_at: string;
   updated_at: string;
-  status: string;
 }
 
 const Identity = () => {
@@ -82,6 +91,9 @@ const Identity = () => {
   );
   const [verifiedAccounts, setVerifiedAccounts] = useState<
     VerifiedSocialAccount[]
+  >([]);
+  const [onChainAccounts, setOnChainAccounts] = useState<
+    { platform: string; accountId: string }[]
   >([]);
   const [validatingAccount, setValidatingAccount] = useState<string | null>(
     null
@@ -250,9 +262,14 @@ const Identity = () => {
   }, [onChainData?.profile_metadata?.avatar_ipfs_hash]);
 
   // Fetch verified social accounts on component mount
+  // Fetch verified accounts and on-chain accounts on mount
   useEffect(() => {
     fetchVerifiedAccounts();
-  }, []);
+
+    if (connectedAddress) {
+      fetchOnChainAccounts(connectedAddress);
+    }
+  }, [connectedAddress]);
 
   // Detect when user returns to tab after OAuth verification
   useEffect(() => {
@@ -478,6 +495,47 @@ const Identity = () => {
     }
   };
 
+  // Fetch on-chain social accounts
+  const fetchOnChainAccounts = async (walletAddress: string) => {
+    try {
+      console.log("🔗 Fetching on-chain social accounts for:", walletAddress);
+
+      // Create read-only provider
+      const provider = new ethers.JsonRpcProvider(
+        process.env.NEXT_PUBLIC_TESTNET_RPC_URL
+      );
+
+      // Use proxy address with DEiDProfile ABI (Diamond pattern)
+      const contract = new ethers.Contract(
+        PROXY_ADDRESS,
+        DEID_PROFILE_ABI.abi,
+        provider
+      );
+
+      // Call getSocialAccounts - returns (string[] platforms, string[] accountIds)
+      const [platforms, accountIds] = await contract.getSocialAccounts(
+        walletAddress
+      );
+
+      console.log("✅ On-chain accounts:", { platforms, accountIds });
+
+      // Map the results
+      const onChainAccountsList = platforms.map(
+        (platform: string, index: number) => ({
+          platform: platform.toLowerCase(),
+          accountId: accountIds[index],
+        })
+      );
+
+      setOnChainAccounts(onChainAccountsList);
+      return onChainAccountsList;
+    } catch (error) {
+      console.error("❌ Error fetching on-chain accounts:", error);
+      setOnChainAccounts([]);
+      return [];
+    }
+  };
+
   // Fetch verified social accounts
   const fetchVerifiedAccounts = async (showRefreshing = false) => {
     try {
@@ -649,30 +707,134 @@ const Identity = () => {
       } else {
         // Placeholder for other platforms
         console.log(`🚧 ${platform} connection not implemented yet`);
-        alert(`${platform} connection will be implemented soon!`);
+        toastInfo(
+          `${platform} connection will be implemented soon!`,
+          "Coming Soon"
+        );
       }
     } catch (error) {
       console.error(`❌ Error connecting ${platform}:`, error);
-      alert(`Failed to connect ${platform}. Please try again.`);
+      toastError(`Failed to connect ${platform}. Please try again.`);
     } finally {
       setConnectingPlatform(null);
     }
   };
 
-  // Handle account validation
+  // Handle account validation - Push social account to blockchain
   const handleValidateAccount = async (accountId: string) => {
     try {
       setValidatingAccount(accountId);
-      console.log(`🔍 Validating account: ${accountId}`);
+      console.log(`🔍 Validating account on-chain: ${accountId}`);
 
-      // TODO: Implement on-chain validation logic here
-      // This will be implemented later as mentioned by the user
+      // Find the account details from verified accounts
+      const account = verifiedAccounts.find((acc) => acc.id === accountId);
+      if (!account) {
+        toastError("Account not found");
+        return;
+      }
 
-      // For now, just show a placeholder message
-      alert(`Validation for account ${accountId} will be implemented soon!`);
+      // Check if already on-chain
+      if (account.tx_hash) {
+        toastInfo(
+          `Account ${account.username} is already verified on-chain`,
+          "Already Verified"
+        );
+        return;
+      }
+
+      if (!walletClient) {
+        toastError("Please connect your wallet first");
+        return;
+      }
+
+      if (!connectedAddress) {
+        toastError("No connected wallet address");
+        return;
+      }
+
+      account.signature = account.signature.startsWith("0x")
+        ? account.signature
+        : `0x${account.signature}`;
+
+      console.log("📝 Account details:", {
+        platform: account.platform,
+        accountId: account.account_id,
+        signature: account.signature,
+      });
+
+      // Initialize contract through proxy
+      const provider = new ethers.BrowserProvider(
+        walletClient as unknown as ethers.Eip1193Provider
+      );
+      const signer = await provider.getSigner();
+
+      // Use proxy address with DEiDProfile ABI (Diamond pattern)
+      const contract = new ethers.Contract(
+        PROXY_ADDRESS,
+        DEID_PROFILE_ABI.abi,
+        signer
+      );
+
+      console.log("📡 Calling linkSocialAccount on contract...");
+
+      // Call linkSocialAccount function
+      const tx = await contract.linkSocialAccount(
+        account.platform,
+        account.account_id,
+        account.signature
+      );
+
+      console.log("⏳ Transaction sent:", tx.hash);
+      toastSuccess(
+        `Transaction submitted! Hash: ${tx.hash.substring(0, 10)}...`
+      );
+
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      console.log("✅ Transaction confirmed:", receipt);
+
+      toastSuccess(
+        `Social account ${account.username} successfully verified on-chain!`,
+        "On-Chain Verified"
+      );
+
+      // Refresh verified accounts and on-chain accounts
+      await fetchVerifiedAccounts(false);
+      if (connectedAddress) {
+        await fetchOnChainAccounts(connectedAddress);
+      }
+
+      // Optionally, update the backend with tx_hash
+      try {
+        const backendUrl =
+          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        await fetch(`${backendUrl}/api/v1/social/links/${account.id}/tx-hash`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            tx_hash: receipt.hash,
+            block_number: receipt.blockNumber,
+          }),
+        });
+        console.log("✅ Backend updated with tx_hash");
+      } catch (backendError) {
+        console.warn("⚠️ Failed to update backend with tx_hash:", backendError);
+      }
     } catch (error) {
       console.error(`❌ Error validating account ${accountId}:`, error);
-      alert(`Failed to validate account. Please try again.`);
+
+      // Better error messages
+      const err = error as { code?: string; message?: string };
+      if (err.code === "ACTION_REJECTED") {
+        toastError("Transaction was rejected by user");
+      } else if (err.message?.includes("already linked")) {
+        toastInfo("This social account is already linked on-chain");
+      } else if (err.message) {
+        toastError(`Failed: ${err.message.substring(0, 100)}`);
+      } else {
+        toastError("Failed to validate account. Please try again.");
+      }
     } finally {
       setValidatingAccount(null);
     }
@@ -1134,17 +1296,28 @@ const Identity = () => {
               {refreshingAccounts}
 
               {verifiedAccounts.length > 0 ? (
-                verifiedAccounts.map((account) => (
-                  <SocialAccountItem
-                    key={account.id}
-                    platform={account.platform}
-                    username={account.username}
-                    account_id={account.account_id}
-                    created_at={account.created_at}
-                    onValidate={() => handleValidateAccount(account.id)}
-                    isValidating={validatingAccount === account.id}
-                  />
-                ))
+                verifiedAccounts.map((account) => {
+                  // Check if this account is on-chain
+                  const isOnChain = onChainAccounts.some(
+                    (onChain) =>
+                      onChain.platform.toLowerCase() ===
+                        account.platform.toLowerCase() &&
+                      onChain.accountId === account.account_id
+                  );
+
+                  return (
+                    <SocialAccountItem
+                      key={account.id}
+                      platform={account.platform}
+                      username={account.username}
+                      account_id={account.account_id}
+                      created_at={account.created_at}
+                      onValidate={() => handleValidateAccount(account.id)}
+                      isValidating={validatingAccount === account.id}
+                      isOnChain={isOnChain}
+                    />
+                  );
+                })
               ) : (
                 <div className="bg-card border border-border rounded-lg p-8 flex flex-col items-center justify-center text-center">
                   <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
