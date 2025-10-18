@@ -129,7 +129,7 @@ const OriginTask = () => {
                     <SelectTrigger className="border-border focus:border-[#CA4A87]">
                       <SelectValue placeholder="Select validation type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border border-border shadow-lg">
                       <SelectItem value="erc20_balance">
                         <div className="flex flex-col items-start">
                           <span className="font-semibold">
@@ -165,17 +165,11 @@ const OriginTask = () => {
                       <SelectTrigger className="border-border focus:border-[#CA4A87]">
                         <SelectValue placeholder="Select chain" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ethereum">
-                          Ethereum Mainnet
-                        </SelectItem>
+                      <SelectContent className="bg-background border border-border shadow-lg">
                         <SelectItem value="sepolia">
                           Ethereum Sepolia
                         </SelectItem>
-                        <SelectItem value="polygon">Polygon</SelectItem>
                         <SelectItem value="bsc">BNB Smart Chain</SelectItem>
-                        <SelectItem value="arbitrum">Arbitrum</SelectItem>
-                        <SelectItem value="optimism">Optimism</SelectItem>
                         <SelectItem value="base">Base</SelectItem>
                       </SelectContent>
                     </Select>
@@ -289,12 +283,17 @@ const OriginTask = () => {
                     </Button>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-1 border border-border rounded-lg p-3">
                     {attributes.map((attr, index) => (
                       <div
                         key={index}
-                        className="flex gap-3 items-start bg-background p-3 rounded-lg border border-border"
+                        className="flex gap-3 items-start bg-background p-3 rounded-lg "
                       >
+                        {/* Number Indicator */}
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#CA4A87]/10 text-[#CA4A87] font-semibold text-sm flex-shrink-0 mt-1">
+                          {index + 1}
+                        </div>
+
                         <div className="flex-1 grid grid-cols-2 gap-3">
                           <Input
                             placeholder="Trait Type (e.g., Rarity)"
