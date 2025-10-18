@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TaskCard } from "@/components/cards/TaskCard";
+import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 
 interface TaskAttribute {
   trait_type: string;
@@ -423,39 +424,19 @@ const OriginTask = () => {
         {!showCreateTask && (
           <>
             {/* Loading State */}
-            {tasksLoading && (
-              <div className="flex items-center justify-center py-16">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-[#CA4A87]/20 border-t-[#CA4A87] rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading tasks...</p>
-                </div>
-              </div>
-            )}
+            {tasksLoading && <IPFSLoadingAnimation />}
 
             {/* Error State */}
             {tasksError && !tasksLoading && (
-              <div className="flex items-center justify-center py-16">
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-                    <X className="w-8 h-8 text-red-500" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-red-500">
-                    Failed to Load Tasks
-                  </h3>
-                  <p className="text-muted-foreground max-w-md">{tasksError}</p>
-                  <Button
-                    onClick={() => window.location.reload()}
-                    className="mt-4 bg-[#CA4A87] hover:bg-[#b13e74]"
-                  >
-                    Retry
-                  </Button>
-                </div>
-              </div>
+              <IPFSErrorAnimation
+                errorMessage={tasksError}
+                onRetry={() => window.location.reload()}
+              />
             )}
 
             {/* Tasks Grid */}
             {!tasksLoading && !tasksError && tasks.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {tasks.map((task) => (
                   <TaskCard
                     key={task.id}
