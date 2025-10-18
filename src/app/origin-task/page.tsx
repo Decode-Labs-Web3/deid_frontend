@@ -23,6 +23,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TaskCard } from "@/components/cards/TaskCard";
+
+interface TaskAttribute {
+  trait_type: string;
+  value: string | number;
+}
+
+interface BadgeDetails {
+  badge_name: string;
+  badge_description: string;
+  badge_image: string;
+  attributes: TaskAttribute[];
+}
+
+interface Task {
+  id: string;
+  task_title: string;
+  task_description: string;
+  validation_type: string;
+  blockchain_network: string;
+  token_contract_address: string;
+  minimum_balance: number;
+  badge_details: BadgeDetails;
+  tx_hash?: string;
+  block_number?: number;
+  created_at: string;
+}
 
 const OriginTask = () => {
   const [userIsAdmin, setUserIsAdmin] = useState(false);
@@ -30,9 +57,49 @@ const OriginTask = () => {
   const [attributes, setAttributes] = useState<
     { trait_type: string; value: string }[]
   >([{ trait_type: "", value: "" }]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
 
   useEffect(() => {
     setUserIsAdmin(isAdmin());
+  }, []);
+
+  // Fetch tasks from API
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setTasksLoading(true);
+        setTasksError(null);
+
+        console.log("🔍 Fetching tasks from API route...");
+        const response = await fetch("/api/task?page=1&page_size=100");
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          console.log(`✅ Fetched ${data.data.length} tasks`);
+          setTasks(data.data);
+        } else {
+          console.log("⚠️ No tasks found or error:", data.error);
+          setTasks([]);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching tasks:", error);
+        setTasksError(
+          error instanceof Error ? error.message : "Failed to fetch tasks"
+        );
+        setTasks([]);
+      } finally {
+        setTasksLoading(false);
+      }
+    };
+
+    fetchTasks();
   }, []);
 
   const addAttribute = () => {
@@ -166,9 +233,7 @@ const OriginTask = () => {
                         <SelectValue placeholder="Select chain" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border border-border shadow-lg">
-                        <SelectItem value="sepolia">
-                          Ethereum Sepolia
-                        </SelectItem>
+                        <SelectItem value="ethereum">Ethereum</SelectItem>
                         <SelectItem value="bsc">BNB Smart Chain</SelectItem>
                         <SelectItem value="base">Base</SelectItem>
                       </SelectContent>
@@ -356,51 +421,75 @@ const OriginTask = () => {
 
         {/* Tasks List */}
         {!showCreateTask && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Example Task Card - Placeholder */}
-            <div className="bg-card border border-border rounded-xl p-6 hover:border-[#CA4A87] transition-all cursor-pointer group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#CA4A87] to-[#b13e74] flex items-center justify-center">
-                  <Trophy className="w-8 h-8 text-white" />
+          <>
+            {/* Loading State */}
+            {tasksLoading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-[#CA4A87]/20 border-t-[#CA4A87] rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading tasks...</p>
                 </div>
-                <span className="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-xs font-semibold">
-                  Active
-                </span>
               </div>
-              <h3 className="text-xl font-bold mb-2 group-hover:text-[#CA4A87] transition-colors">
-                King of Ethereum
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Prove that you hold more than 1000 ETH in your wallet
-              </p>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>ERC20 Balance</span>
-                <span>0 / 100 completed</span>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border">
-                <Button
-                  size="sm"
-                  className="w-full bg-[#CA4A87]/10 text-[#CA4A87] hover:bg-[#CA4A87] hover:text-white"
-                >
-                  View Details
-                </Button>
-              </div>
-            </div>
+            )}
 
-            {/* Empty State for No Tasks */}
-            {!userIsAdmin && (
-              <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+            {/* Error State */}
+            {tasksError && !tasksLoading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                    <X className="w-8 h-8 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2 text-red-500">
+                    Failed to Load Tasks
+                  </h3>
+                  <p className="text-muted-foreground max-w-md">{tasksError}</p>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    className="mt-4 bg-[#CA4A87] hover:bg-[#b13e74]"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Tasks Grid */}
+            {!tasksLoading && !tasksError && tasks.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    id={task.id}
+                    task_title={task.task_title}
+                    task_description={task.task_description}
+                    validation_type={task.validation_type}
+                    blockchain_network={task.blockchain_network}
+                    token_contract_address={task.token_contract_address}
+                    minimum_balance={task.minimum_balance}
+                    badge_details={task.badge_details}
+                    tx_hash={task.tx_hash}
+                    block_number={task.block_number}
+                    created_at={task.created_at}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!tasksLoading && !tasksError && tasks.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                   <Trophy className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">No Tasks Yet</h3>
                 <p className="text-muted-foreground max-w-md">
-                  Origin tasks are coming soon! Check back later to complete
-                  challenges and earn exclusive badges.
+                  {userIsAdmin
+                    ? "Create your first task to get started!"
+                    : "Origin tasks are coming soon! Check back later to complete challenges and earn exclusive badges."}
                 </p>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </AppLayout>

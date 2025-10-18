@@ -65,7 +65,7 @@ export interface OnChainProfileData {
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
   process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-  "0x2cDf115BB5ba6cd3d570F6cd1E98147078c9Da99";
+  "0x446cec444D5553641D3d10611Db65192dbcA2826";
 
 // Using imported ABI from contract JSON files
 
