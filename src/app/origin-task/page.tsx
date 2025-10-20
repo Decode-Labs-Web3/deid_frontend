@@ -510,7 +510,7 @@ const OriginTask = () => {
                           <SelectItem value="erc20_balance_check">
                             <div className="flex flex-col items-start">
                               <span className="font-semibold">
-                                ERC20 Balance Check
+                                Token Balance Check
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 Check if user holds minimum ERC20 token balance
@@ -520,7 +520,7 @@ const OriginTask = () => {
                           <SelectItem value="erc721_balance_check">
                             <div className="flex flex-col items-start">
                               <span className="font-semibold">
-                                ERC721 Balance Check
+                                NFT Balance Check
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 Check if user owns minimum NFTs from collection
