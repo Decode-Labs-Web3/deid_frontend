@@ -9,6 +9,7 @@ interface SocialAccountItemProps {
   created_at: string;
   onValidate?: () => void;
   isValidating?: boolean;
+  isOnChain?: boolean;
 }
 
 const getPlatformIcon = (platform: string) => {
@@ -67,13 +68,20 @@ export const SocialAccountItem = ({
   created_at,
   onValidate,
   isValidating = false,
+  isOnChain = false,
 }: SocialAccountItemProps) => {
   const platformIcon = getPlatformIcon(platform);
   const platformName = getPlatformName(platform);
   const verificationDate = formatDate(created_at);
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:border-primary transition-colors group">
+    <div
+      className={`bg-card rounded-lg p-4 flex items-center justify-between transition-colors group ${
+        isOnChain
+          ? "border-2 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:shadow-[0_0_20px_rgba(234,179,8,0.5)]"
+          : "border border-border hover:border-primary"
+      }`}
+    >
       <div className="flex items-center gap-4">
         {/* Platform Icon */}
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-black flex items-center justify-center">
@@ -100,24 +108,32 @@ export const SocialAccountItem = ({
       </div>
 
       {/* Validate Button */}
-      <Button
-        onClick={onValidate}
-        disabled={isValidating}
-        className="bg-gradient-to-r from-[#CA4A87] to-[#b13e74] hover:from-[#b13e74] hover:to-[#a0335f] text-white font-semibold"
-        size="sm"
-      >
-        {isValidating ? (
-          <>
-            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2" />
-            Validating...
-          </>
-        ) : (
-          <>
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Validate
-          </>
-        )}
-      </Button>
+      {!isOnChain && (
+        <Button
+          onClick={onValidate}
+          disabled={isValidating}
+          className="bg-gradient-to-r from-[#CA4A87] to-[#b13e74] hover:from-[#b13e74] hover:to-[#a0335f] text-white font-semibold text-xs"
+          size="sm"
+        >
+          {isValidating ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2" />
+              Validating...
+            </>
+          ) : (
+            <>
+              <ExternalLink className="w-4 h-4 mr-2" />
+              On-Chain Validate
+            </>
+          )}
+        </Button>
+      )}
+      {isOnChain && (
+        <div className="flex items-center gap-2 text-yellow-600 font-semibold text-xs">
+          <CheckCircle className="w-5 h-5" />
+          <span>On-Chain Verified</span>
+        </div>
+      )}
     </div>
   );
 };

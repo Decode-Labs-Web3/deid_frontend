@@ -13,7 +13,7 @@ interface LoadingStep {
 const loadingSteps: LoadingStep[] = [
   {
     icon: <Database className="w-6 h-6" />,
-    text: "Connecting to IPFS network...",
+    text: "Connecting to Blockchain and IPFS network...",
     delay: 0,
   },
   {
@@ -47,7 +47,32 @@ export const IPFSLoadingAnimation = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
+  // Initialize random values with fixed values to prevent hydration mismatch
+  const [ipfsHash, setIpfsHash] = useState(
+    "qm1234567890abcdefghijklmnopqrstuvwxyz012345"
+  );
+  const [nodesCount, setNodesCount] = useState(125);
+  const [peersCount, setPeersCount] = useState(25);
+  const [latencyMs, setLatencyMs] = useState(750);
+
   useEffect(() => {
+    // Generate random values only on client
+    const generateRandomHash = () => {
+      return Array.from({ length: 46 })
+        .map(
+          () =>
+            "abcdefghijklmnopqrstuvwxyz0123456789"[
+              Math.floor(Math.random() * 36)
+            ]
+        )
+        .join("");
+    };
+
+    setIpfsHash(generateRandomHash());
+    setNodesCount(Math.floor(Math.random() * 50 + 100));
+    setPeersCount(Math.floor(Math.random() * 10 + 20));
+    setLatencyMs(Math.floor(Math.random() * 500 + 500));
+
     // Progress bar animation
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
@@ -199,73 +224,32 @@ export const IPFSLoadingAnimation = () => {
         {/* Loading Steps */}
         <div className="space-y-3">
           <AnimatePresence mode="wait">
-            {loadingSteps.slice(0, currentStep + 1).map((step, index) => (
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.4 }}
+              className="flex items-center gap-3 p-3 rounded-lg transition-all bg-gradient-to-r from-[#CA4A87]/20 to-[#b13e74]/20 border border-[#CA4A87]/30"
+            >
               <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                  index === currentStep
-                    ? "bg-gradient-to-r from-[#CA4A87]/20 to-[#b13e74]/20 border border-[#CA4A87]/30"
-                    : "bg-muted/30"
-                }`}
+                className="p-2 rounded-lg bg-gradient-to-br from-[#CA4A87] to-[#b13e74] text-white"
+                animate={{
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{
+                  duration: 0.6,
+                  repeat: Infinity,
+                }}
               >
-                <motion.div
-                  className={`p-2 rounded-lg ${
-                    index === currentStep
-                      ? "bg-gradient-to-br from-[#CA4A87] to-[#b13e74] text-white"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                  animate={
-                    index === currentStep
-                      ? {
-                          scale: [1, 1.1, 1],
-                        }
-                      : {}
-                  }
-                  transition={{
-                    duration: 0.6,
-                    repeat: Infinity,
-                  }}
-                >
-                  {step.icon}
-                </motion.div>
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${
-                      index === currentStep
-                        ? "text-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {step.text}
-                  </p>
-                </div>
-                {index < currentStep && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center"
-                  >
-                    <svg
-                      className="w-3 h-3 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={3}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </motion.div>
-                )}
+                {loadingSteps[currentStep].icon}
               </motion.div>
-            ))}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  {loadingSteps[currentStep].text}
+                </p>
+              </div>
+            </motion.div>
           </AnimatePresence>
         </div>
 
@@ -301,15 +285,7 @@ export const IPFSLoadingAnimation = () => {
               repeat: Infinity,
             }}
           >
-            {Array.from({ length: 46 })
-              .map(
-                () =>
-                  "abcdefghijklmnopqrstuvwxyz0123456789"[
-                    Math.floor(Math.random() * 36)
-                  ]
-              )
-              .join("")
-              .match(/.{1,46}/g)?.[0] || ""}
+            {ipfsHash}
           </motion.div>
         </div>
 
@@ -321,7 +297,7 @@ export const IPFSLoadingAnimation = () => {
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              {Math.floor(Math.random() * 50 + 100)}
+              {nodesCount}
             </motion.div>
             <div className="text-xs text-muted-foreground mt-1">Nodes</div>
           </div>
@@ -331,7 +307,7 @@ export const IPFSLoadingAnimation = () => {
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
             >
-              {Math.floor(Math.random() * 10 + 20)}
+              {peersCount}
             </motion.div>
             <div className="text-xs text-muted-foreground mt-1">Peers</div>
           </div>
@@ -341,7 +317,7 @@ export const IPFSLoadingAnimation = () => {
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
             >
-              {Math.floor(Math.random() * 500 + 500)}
+              {latencyMs}
             </motion.div>
             <div className="text-xs text-muted-foreground mt-1">ms</div>
           </div>

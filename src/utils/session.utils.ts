@@ -24,6 +24,10 @@ export const logout = (): void => {
   document.cookie =
     "deid_session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
+  // Clear session storage
+  sessionStorage.removeItem("primaryWalletAddress");
+  sessionStorage.removeItem("userRole");
+
   // Redirect to login page
   window.location.href = "/login";
 };
@@ -37,6 +41,7 @@ export const switchToOtherAccount = (): void => {
 
   // Clear session storage
   sessionStorage.removeItem("primaryWalletAddress");
+  sessionStorage.removeItem("userRole");
 
   // Redirect to login page
   window.location.href = "/login";
@@ -45,4 +50,26 @@ export const switchToOtherAccount = (): void => {
 export const getPrimaryWalletAddress = (): string | null => {
   if (typeof window === "undefined") return null;
   return sessionStorage.getItem("primaryWalletAddress");
+};
+
+// User role management
+export const setUserRole = (role: string): void => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem("userRole", role);
+};
+
+export const getUserRole = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("userRole");
+};
+
+export const isAdmin = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const role = getUserRole();
+  return role === "admin" || role === "super_admin";
+};
+
+export const clearUserRole = (): void => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem("userRole");
 };

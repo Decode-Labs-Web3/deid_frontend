@@ -24,7 +24,8 @@ import {
 
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
-  process.env.PROXY_ADDRESS || "0x76050bee51946D027B5548d97C6166e08e5a2B1C";
+  process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
+  "0x446cec444D5553641D3d10611Db65192dbcA2826";
 
 // Import the actual ABI from the contract JSON files
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
@@ -289,7 +290,9 @@ const CreateAccount = () => {
           DEID_PROFILE_ABI.bytecode,
           signer
         );
-        contract = DEiDProfileFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+        contract = DEiDProfileFactory.attach(
+          PROXY_ADDRESS as string
+        ) as ethers.Contract;
 
         // Test if this ABI works
         await contract.getProfile(userWallet);
@@ -303,7 +306,9 @@ const CreateAccount = () => {
           DEID_PROXY_ABI.bytecode,
           signer
         );
-        contract = DEiDProxyFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+        contract = DEiDProxyFactory.attach(
+          PROXY_ADDRESS as string
+        ) as ethers.Contract;
         console.log("✅ Using DEiDProxy ABI");
       }
 
@@ -312,7 +317,7 @@ const CreateAccount = () => {
       // Check if contract is deployed at the proxy address
       console.log("🔍 Checking contract deployment at:", PROXY_ADDRESS);
       try {
-        const code = await provider.getCode(PROXY_ADDRESS);
+        const code = await provider.getCode(PROXY_ADDRESS as string);
         if (code === "0x") {
           console.error("❌ Contract not deployed at proxy address");
           console.error("   Address:", PROXY_ADDRESS);

@@ -64,7 +64,8 @@ export interface OnChainProfileData {
 
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
-  process.env.PROXY_ADDRESS || "0x76050bee51946D027B5548d97C6166e08e5a2B1C";
+  process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
+  "0x446cec444D5553641D3d10611Db65192dbcA2826";
 
 // Using imported ABI from contract JSON files
 
@@ -101,7 +102,9 @@ export const checkOnChainProfile = async (
         DEID_PROFILE_ABI.bytecode,
         provider
       );
-      contract = DEiDProfileFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+      contract = DEiDProfileFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
 
       // Test if this ABI works
       await contract.getProfile(walletAddress);
@@ -115,7 +118,9 @@ export const checkOnChainProfile = async (
         DEID_PROXY_ABI.bytecode,
         provider
       );
-      contract = DEiDProxyFactory.attach(PROXY_ADDRESS) as ethers.Contract;
+      contract = DEiDProxyFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
       console.log("✅ Using DEiDProxy ABI");
     }
 

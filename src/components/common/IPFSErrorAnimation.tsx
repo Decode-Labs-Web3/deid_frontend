@@ -19,7 +19,7 @@ interface IPFSErrorAnimationProps {
 }
 
 export const IPFSErrorAnimation = ({
-  errorMessage = "Failed to load data from IPFS",
+  errorMessage = "Failed to load data from Blockchain or IPFS",
   onRetry,
 }: IPFSErrorAnimationProps) => {
   const [glitchEffect, setGlitchEffect] = useState(false);
@@ -199,7 +199,7 @@ export const IPFSErrorAnimation = ({
                 Connection Failed
               </h2>
               <p className="text-xl text-muted-foreground">
-                Unable to reach IPFS network
+                Unable to reach Blockchain or IPFS network
               </p>
             </motion.div>
 
