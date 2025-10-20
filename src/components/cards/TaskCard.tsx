@@ -46,7 +46,7 @@ export const TaskCard = ({
   const getValidationTypeLabel = (type: string) => {
     const types: Record<string, string> = {
       erc20_balance_check: "ERC20 Balance",
-      erc721_owner: "NFT Ownership",
+      erc721_balance_check: "ERC721 Balance",
     };
     return types[type] || type;
   };

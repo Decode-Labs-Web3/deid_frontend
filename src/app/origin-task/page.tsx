@@ -197,24 +197,29 @@ const OriginTask = () => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const ipfsGateway =
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL_POST ||
-      "http://35.247.142.76:5001/api/v0/add";
+    console.log("📤 Uploading to IPFS via API route...");
 
-    console.log("📤 Uploading to IPFS:", ipfsGateway);
-
-    const response = await fetch(ipfsGateway, {
+    // Upload via Next.js API route (avoids CORS issues)
+    const response = await fetch("/api/ipfs/upload", {
       method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error(`IPFS upload failed: ${response.statusText}`);
+      const errorData = await response.json();
+      throw new Error(
+        errorData.error || `IPFS upload failed: ${response.statusText}`
+      );
     }
 
     const data = await response.json();
-    console.log("✅ IPFS upload successful:", data.Hash);
-    return data.Hash;
+
+    if (!data.success || !data.hash) {
+      throw new Error("Failed to get IPFS hash from response");
+    }
+
+    console.log("✅ IPFS upload successful:", data.hash);
+    return data.hash;
   };
 
   const handleCreateTask = async () => {
@@ -260,42 +265,34 @@ const OriginTask = () => {
         },
       };
 
-      console.log("📝 Creating task with payload:", payload);
+      console.log("📝 Creating task via API route...");
 
-      // Step 3: Submit to backend
-      const backendUrl = process.env.DEID_AUTH_BACKEND || "http://0.0.0.0:8000";
-      const response = await fetch(`${backendUrl}/api/v1/task/create`, {
+      // Step 3: Submit to backend via API route
+      const response = await fetch("/api/task/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
         throw new Error(
-          errorData.message || `Failed to create task: ${response.statusText}`
+          result.message || `Failed to create task: ${response.statusText}`
         );
       }
 
-      const result = await response.json();
       console.log("✅ Task created successfully:", result);
 
-      if (result.success && result.data) {
+      if (result.data) {
         setCreatedTask(result.data);
         setCreationSuccess(true);
         toastSuccess("Task and NFT Badge Created!", "Your task is now live!");
 
         // Refresh task list
-        const tasksResponse = await fetch("/api/task?page=1&page_size=100");
-        if (tasksResponse.ok) {
-          const tasksData = await tasksResponse.json();
-          if (tasksData.success && tasksData.data) {
-            setTasks(tasksData.data);
-          }
-        }
+        await refreshTaskList();
       } else {
         throw new Error("Invalid response from server");
       }
@@ -332,6 +329,20 @@ const OriginTask = () => {
 
   const handleCreateAnother = () => {
     resetForm();
+  };
+
+  const refreshTaskList = async () => {
+    try {
+      const tasksResponse = await fetch("/api/task?page=1&page_size=100");
+      if (tasksResponse.ok) {
+        const tasksData = await tasksResponse.json();
+        if (tasksData.success && tasksData.data) {
+          setTasks(tasksData.data);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Failed to refresh task list:", error);
+    }
   };
 
   return (
@@ -506,13 +517,13 @@ const OriginTask = () => {
                               </span>
                             </div>
                           </SelectItem>
-                          <SelectItem value="erc721_owner">
+                          <SelectItem value="erc721_balance_check">
                             <div className="flex flex-col items-start">
                               <span className="font-semibold">
-                                ERC721 NFT Ownership
+                                ERC721 Balance Check
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                Check if user owns NFT from collection
+                                Check if user owns minimum NFTs from collection
                               </span>
                             </div>
                           </SelectItem>

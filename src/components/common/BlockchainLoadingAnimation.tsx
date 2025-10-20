@@ -57,7 +57,6 @@ export const BlockchainLoadingAnimation = () => {
           <motion.div
             className="absolute z-10 w-24 h-24 rounded-2xl bg-gradient-to-br from-[#CA4A87] to-[#b13e74] flex items-center justify-center"
             animate={{
-              rotate: [0, 360],
               scale: [1, 1.1, 1],
             }}
             transition={{
