@@ -27,11 +27,36 @@ const loadingSteps = [
   },
 ];
 
+// Generate random hex string
+const generateRandomHash = (length: number) => {
+  const chars = "0123456789abcdef";
+  let hash = "";
+  for (let i = 0; i < length; i++) {
+    hash += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return hash;
+};
+
 export const BlockchainLoadingAnimation = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
+  // Dynamic hashes that update
+  const [ipfsHash, setIpfsHash] = useState("Qm" + generateRandomHash(44));
+  const [txHash, setTxHash] = useState("0x" + generateRandomHash(64));
+  const [tokenId, setTokenId] = useState(Math.floor(Math.random() * 99999));
+
+  // Dynamic status text
+  const [ipfsStatus, setIpfsStatus] = useState("Uploading");
+  const [blockchainStatus, setBlockchainStatus] = useState("Pending");
+  const [nftStatus, setNftStatus] = useState("Minting");
+
   useEffect(() => {
+    // Fixed values to prevent hydration mismatch
+    setIpfsHash("Qm" + generateRandomHash(44));
+    setTxHash("0x" + generateRandomHash(64));
+    setTokenId(Math.floor(Math.random() * 99999));
+
     const stepInterval = setInterval(() => {
       setCurrentStep((prev) =>
         prev < loadingSteps.length - 1 ? prev + 1 : prev
@@ -42,9 +67,50 @@ export const BlockchainLoadingAnimation = () => {
       setProgress((prev) => (prev < 95 ? prev + 1 : prev));
     }, 100);
 
+    // Update IPFS hash every 800ms
+    const ipfsInterval = setInterval(() => {
+      setIpfsHash("Qm" + generateRandomHash(44));
+    }, 800);
+
+    // Update TX hash every 1200ms
+    const txInterval = setInterval(() => {
+      setTxHash("0x" + generateRandomHash(64));
+    }, 1200);
+
+    // Update Token ID every 1000ms
+    const tokenInterval = setInterval(() => {
+      setTokenId(Math.floor(Math.random() * 99999));
+    }, 1000);
+
+    // Cycle through IPFS statuses
+    const ipfsStatusInterval = setInterval(() => {
+      const statuses = ["Uploading", "Processing", "Calculating", "Verifying"];
+      setIpfsStatus(statuses[Math.floor(Math.random() * statuses.length)]);
+    }, 1500);
+
+    // Cycle through blockchain statuses
+    const blockchainStatusInterval = setInterval(() => {
+      const statuses = ["Pending", "Confirming", "Validating", "Broadcasting"];
+      setBlockchainStatus(
+        statuses[Math.floor(Math.random() * statuses.length)]
+      );
+    }, 1300);
+
+    // Cycle through NFT statuses
+    const nftStatusInterval = setInterval(() => {
+      const statuses = ["Minting", "Encoding", "Generating", "Creating"];
+      setNftStatus(statuses[Math.floor(Math.random() * statuses.length)]);
+    }, 1100);
+
     return () => {
       clearInterval(stepInterval);
       clearInterval(progressInterval);
+      clearInterval(ipfsInterval);
+      clearInterval(txInterval);
+      clearInterval(tokenInterval);
+      clearInterval(ipfsStatusInterval);
+      clearInterval(blockchainStatusInterval);
+      clearInterval(nftStatusInterval);
     };
   }, []);
 
@@ -168,19 +234,74 @@ export const BlockchainLoadingAnimation = () => {
           </motion.div>
         </div>
 
-        {/* Network Info */}
-        <div className="grid grid-cols-3 gap-4 text-center text-xs">
+        {/* Network Info with Dynamic Data */}
+        <div className="space-y-3">
           <div className="bg-card border border-border rounded-lg p-3">
-            <div className="text-muted-foreground mb-1">IPFS</div>
-            <div className="font-semibold text-[#CA4A87]">Uploading</div>
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-xs text-muted-foreground">IPFS Hash</div>
+              <motion.div
+                key={ipfsStatus}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xs font-semibold text-[#CA4A87]"
+              >
+                {ipfsStatus}
+              </motion.div>
+            </div>
+            <motion.div
+              key={ipfsHash}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="font-mono text-xs text-muted-foreground truncate"
+            >
+              {ipfsHash}
+            </motion.div>
           </div>
+
           <div className="bg-card border border-border rounded-lg p-3">
-            <div className="text-muted-foreground mb-1">Blockchain</div>
-            <div className="font-semibold text-[#CA4A87]">Pending</div>
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-xs text-muted-foreground">
+                Transaction Hash
+              </div>
+              <motion.div
+                key={blockchainStatus}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xs font-semibold text-[#CA4A87]"
+              >
+                {blockchainStatus}
+              </motion.div>
+            </div>
+            <motion.div
+              key={txHash}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="font-mono text-xs text-muted-foreground truncate"
+            >
+              {txHash}
+            </motion.div>
           </div>
+
           <div className="bg-card border border-border rounded-lg p-3">
-            <div className="text-muted-foreground mb-1">NFT Badge</div>
-            <div className="font-semibold text-[#CA4A87]">Minting</div>
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-xs text-muted-foreground">NFT Token ID</div>
+              <motion.div
+                key={nftStatus}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xs font-semibold text-[#CA4A87]"
+              >
+                {nftStatus}
+              </motion.div>
+            </div>
+            <motion.div
+              key={tokenId}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="font-mono text-base font-bold text-foreground"
+            >
+              #{tokenId.toString().padStart(5, "0")}
+            </motion.div>
           </div>
         </div>
       </div>

@@ -289,6 +289,7 @@ const OriginTask = () => {
       if (result.data) {
         setCreatedTask(result.data);
         setCreationSuccess(true);
+        setIsCreating(false); // ✅ Stop loading animation
         toastSuccess("Task and NFT Badge Created!", "Your task is now live!");
 
         // Refresh task list
@@ -377,15 +378,15 @@ const OriginTask = () => {
         {/* Create Task Form - Admin Only */}
         {userIsAdmin && showCreateTask && (
           <>
-            {/* Loading State */}
+            {/* Loading State - Shows blockchain animation */}
             {isCreating && (
               <div className="mb-8">
                 <BlockchainLoadingAnimation />
               </div>
             )}
 
-            {/* Success State */}
-            {creationSuccess && createdTask && (
+            {/* Success State - Replaces loading animation */}
+            {!isCreating && creationSuccess && createdTask && (
               <div className="bg-card border-2 border-green-500/30 rounded-xl p-8 mb-8">
                 <div className="text-center space-y-6">
                   <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
@@ -442,7 +443,7 @@ const OriginTask = () => {
               </div>
             )}
 
-            {/* Form */}
+            {/* Form - Only shows when not creating and not showing success */}
             {!isCreating && !creationSuccess && (
               <div className="bg-card border-2 border-[#CA4A87]/30 rounded-xl p-8 mb-8">
                 <div className="flex items-center justify-between mb-6">
