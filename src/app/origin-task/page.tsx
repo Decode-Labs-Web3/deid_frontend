@@ -12,6 +12,8 @@ import {
   Trophy,
   CheckCircle,
   X,
+  Filter,
+  XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,8 @@ import {
   BlockchainLoadingAnimation,
 } from "@/components/common";
 import { toastError, toastSuccess } from "@/utils/toast.utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 
 interface TaskAttribute {
   trait_type: string;
@@ -68,6 +72,10 @@ const OriginTask = () => {
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
 
+  // Multi-select filter state
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+
   // Form state
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -92,15 +100,35 @@ const OriginTask = () => {
     setUserIsAdmin(isAdmin());
   }, []);
 
-  // Fetch tasks from API
+  // Build API URL with filter parameters
+  const buildFilteredApiUrl = () => {
+    const params = new URLSearchParams();
+    params.append("page", "1");
+    params.append("page_size", "100");
+
+    // Add network filters (supports multiple)
+    selectedNetworks.forEach((network) => {
+      params.append("network", network);
+    });
+
+    // Add type filters (supports multiple)
+    selectedTypes.forEach((type) => {
+      params.append("type", type);
+    });
+
+    return `/api/task?${params.toString()}`;
+  };
+
+  // Fetch tasks from API (with filters)
   useEffect(() => {
     const fetchTasks = async () => {
       try {
         setTasksLoading(true);
         setTasksError(null);
 
-        console.log("🔍 Fetching tasks from API route...");
-        const response = await fetch("/api/task?page=1&page_size=100");
+        const apiUrl = buildFilteredApiUrl();
+        console.log("🔍 Fetching tasks from API route:", apiUrl);
+        const response = await fetch(apiUrl);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch tasks: ${response.statusText}`);
@@ -127,7 +155,8 @@ const OriginTask = () => {
     };
 
     fetchTasks();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNetworks, selectedTypes]);
 
   const addAttribute = () => {
     setAttributes([...attributes, { trait_type: "", value: "" }]);
@@ -345,6 +374,30 @@ const OriginTask = () => {
       console.error("❌ Failed to refresh task list:", error);
     }
   };
+
+  // Toggle filter selection
+  const toggleNetworkFilter = (network: string) => {
+    setSelectedNetworks((prev) =>
+      prev.includes(network)
+        ? prev.filter((n) => n !== network)
+        : [...prev, network]
+    );
+  };
+
+  const toggleTypeFilter = (type: string) => {
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedNetworks([]);
+    setSelectedTypes([]);
+  };
+
+  // Count active filters
+  const activeFilterCount = selectedNetworks.length + selectedTypes.length;
 
   return (
     <AppLayout>
@@ -805,6 +858,134 @@ const OriginTask = () => {
         {/* Tasks List */}
         {!showCreateTask && (
           <>
+            {/* Filter Section - Always show when not in create mode and not in initial loading */}
+            {!tasksLoading && !tasksError && (
+              <div className="mb-6 bg-card border border-border rounded-xl p-4">
+                {/* Filter Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-[#CA4A87]" />
+                    <h3 className="font-semibold">Filter Tasks</h3>
+                    {activeFilterCount > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-[#CA4A87]/10 text-[#CA4A87] hover:bg-[#CA4A87]/20"
+                      >
+                        {activeFilterCount} active
+                      </Badge>
+                    )}
+                  </div>
+                  {activeFilterCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllFilters}
+                      className="h-7 text-sm text-[#CA4A87] hover:text-[#b13e74] hover:bg-[#CA4A87]/10"
+                    >
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-20 flex-wrap">
+                  {/* Network Filters - Inline */}
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Networks:
+                    </label>
+                    <div className="flex items-center gap-3">
+                      {[
+                        { value: "ethereum", label: "Ethereum" },
+                        { value: "base", label: "Base" },
+                        { value: "bsc", label: "BNB Smart Chain" },
+                      ].map((network) => (
+                        <div
+                          key={network.value}
+                          className="flex items-center space-x-1.5"
+                        >
+                          <Checkbox
+                            id={`network-${network.value}`}
+                            checked={selectedNetworks.includes(network.value)}
+                            onCheckedChange={() =>
+                              toggleNetworkFilter(network.value)
+                            }
+                            className="border-[#CA4A87] data-[state=checked]:bg-[#CA4A87] data-[state=checked]:border-[#CA4A87]"
+                          />
+                          <label
+                            htmlFor={`network-${network.value}`}
+                            className="text-sm cursor-pointer select-none"
+                          >
+                            {network.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Type Filters - Inline */}
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Types:
+                    </label>
+                    <div className="flex items-center gap-3">
+                      {[
+                        {
+                          value: "token",
+                          label: "Token Balance",
+                        },
+                        {
+                          value: "nft",
+                          label: "NFT Balance",
+                        },
+                      ].map((type) => (
+                        <div
+                          key={type.value}
+                          className="flex items-center space-x-1.5"
+                        >
+                          <Checkbox
+                            id={`type-${type.value}`}
+                            checked={selectedTypes.includes(type.value)}
+                            onCheckedChange={() => toggleTypeFilter(type.value)}
+                            className="border-[#CA4A87] data-[state=checked]:bg-[#CA4A87] data-[state=checked]:border-[#CA4A87]"
+                          />
+                          <label
+                            htmlFor={`type-${type.value}`}
+                            className="text-sm cursor-pointer select-none"
+                          >
+                            {type.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Results Count - Only show if there are tasks in DB */}
+                {tasks.length > 0 && (
+                  <div className="text-sm text-muted-foreground mt-3 pt-3 border-t border-border">
+                    {activeFilterCount > 0 ? (
+                      <>
+                        Showing{" "}
+                        <span className="font-semibold text-foreground">
+                          {tasks.length}
+                        </span>{" "}
+                        filtered task{tasks.length !== 1 ? "s" : ""}
+                      </>
+                    ) : (
+                      <>
+                        Showing all{" "}
+                        <span className="font-semibold text-foreground">
+                          {tasks.length}
+                        </span>{" "}
+                        task{tasks.length !== 1 ? "s" : ""}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Loading State */}
             {tasksLoading && <IPFSLoadingAnimation />}
 
@@ -838,20 +1019,23 @@ const OriginTask = () => {
               </div>
             )}
 
-            {/* Empty State */}
-            {!tasksLoading && !tasksError && tasks.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Trophy className="w-8 h-8 text-muted-foreground" />
+            {/* Empty State (no tasks in database) */}
+            {!tasksLoading &&
+              !tasksError &&
+              tasks.length === 0 &&
+              activeFilterCount === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Trophy className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No Tasks Yet</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    {userIsAdmin
+                      ? "Create your first task to get started!"
+                      : "Origin tasks are coming soon! Check back later to complete challenges and earn exclusive badges."}
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">No Tasks Yet</h3>
-                <p className="text-muted-foreground max-w-md">
-                  {userIsAdmin
-                    ? "Create your first task to get started!"
-                    : "Origin tasks are coming soon! Check back later to complete challenges and earn exclusive badges."}
-                </p>
-              </div>
-            )}
+              )}
           </>
         )}
       </div>
