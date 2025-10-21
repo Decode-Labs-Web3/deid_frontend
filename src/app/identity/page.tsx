@@ -21,7 +21,7 @@ import { toastInfo, toastError, toastSuccess } from "@/utils/toast.utils";
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
   process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-  "0x446cec444D5553641D3d10611Db65192dbcA2826";
+  "0xAF993e50103D8a19a5FD66EF3a45a18D1A713E2f";
 
 interface UpdateProfileData {
   method: string;
@@ -1098,7 +1098,7 @@ const Identity = () => {
 
             <div>
               <h3 className="text-xl font-bold mb-6 border-b border-border pb-4">
-                Badges
+                DEiD Badges
               </h3>
               <div className="grid grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {badges.map((badge, i) => (

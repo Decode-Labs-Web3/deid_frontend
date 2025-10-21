@@ -65,7 +65,7 @@ export interface OnChainProfileData {
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
   process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-  "0x446cec444D5553641D3d10611Db65192dbcA2826";
+  "0xAF993e50103D8a19a5FD66EF3a45a18D1A713E2f";
 
 // Using imported ABI from contract JSON files
 
@@ -237,6 +237,6 @@ export const checkOnChainProfile = async (
 };
 
 // Contract configuration
-// Contract Address: 0x446cec444D5553641D3d10611Db65192dbcA2826
+// Contract Address: 0xAF993e50103D8a19a5FD66EF3a45a18D1A713E2f
 // RPC URL: https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161 (Ethereum Sepolia)
 // Network: Ethereum Sepolia
