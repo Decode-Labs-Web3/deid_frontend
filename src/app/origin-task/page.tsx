@@ -888,11 +888,13 @@ const OriginTask = () => {
                   )}
                 </div>
 
-                <div className="flex items-start gap-20 flex-wrap">
+                <div className="flex items-start gap-6 flex-wrap">
                   {/* Network Filters - Inline */}
                   <div className="flex items-center gap-3">
                     <label className="text-sm font-medium text-muted-foreground">
-                      Networks:
+                      <span className="text-foreground font-semibold">
+                        Networks:
+                      </span>
                     </label>
                     <div className="flex items-center gap-3">
                       {[
@@ -926,7 +928,9 @@ const OriginTask = () => {
                   {/* Type Filters - Inline */}
                   <div className="flex items-center gap-3">
                     <label className="text-sm font-medium text-muted-foreground">
-                      Types:
+                      <span className="text-foreground font-semibold">
+                        Types:
+                      </span>
                     </label>
                     <div className="flex items-center gap-3">
                       {[
