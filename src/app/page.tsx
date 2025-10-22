@@ -18,7 +18,7 @@ const Loading = () => {
       try {
         console.log("🧪 Testing session cookie by calling backend...");
         const backendUrl =
-          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+          process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
 
         const response = await fetch(`${backendUrl}/api/v1/decode/my-profile`, {
           method: "GET",

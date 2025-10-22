@@ -21,7 +21,7 @@ import { toastInfo, toastError, toastSuccess } from "@/utils/toast.utils";
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
   process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-  "0xd92A5f52a91C90d6f68Dc041E839035aE83346ac";
+  "0xfC336f4521eC2d95827d5c630A04587BFf4a160d";
 
 interface UpdateProfileData {
   method: string;
@@ -116,7 +116,7 @@ const Identity = () => {
         // Step 1: Fetch user data from backend first
         console.log("📡 Fetching user data from backend...");
         const backendUrl =
-          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+          process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
         const backendResponse = await fetch(
           `${backendUrl}/api/v1/decode/my-profile`,
           {
@@ -362,7 +362,7 @@ const Identity = () => {
       // Fetch update profile data from backend
       console.log("📡 Fetching update profile data...");
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
       const response = await fetch(`${backendUrl}/api/v1/sync/update-profile`, {
         method: "POST",
         headers: {
@@ -561,7 +561,7 @@ const Identity = () => {
       }
       console.log("🔍 Fetching verified social accounts...");
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
 
       const response = await fetch(
         `${backendUrl}/api/v1/social/links?status=verified`,
@@ -603,7 +603,7 @@ const Identity = () => {
       setConnectingPlatform(platform);
 
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
 
       if (platform === "discord") {
         // Get Discord OAuth URL
@@ -824,7 +824,7 @@ const Identity = () => {
       // Optionally, update the backend with tx_hash
       try {
         const backendUrl =
-          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+          process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
         await fetch(`${backendUrl}/api/v1/social/links/${account.id}/tx-hash`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

@@ -8,7 +8,7 @@ export async function POST(
     // Await params for Next.js 15+
     const { taskId } = await params;
 
-    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
     const apiUrl = `${backendUrl}/api/v1/task/${taskId}/validate`;
 
     console.log("🔍 Validating task:", taskId);

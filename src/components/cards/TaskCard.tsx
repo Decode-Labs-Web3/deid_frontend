@@ -15,7 +15,6 @@ import { toastError, toastSuccess } from "@/utils/toast.utils";
 import { handleUnauthorized } from "@/utils/backend.utils";
 import { ethers } from "ethers";
 import DEID_BADGE_ABI from "@/contracts/verification/BadgeSystem.sol/BadgeSystem.json";
-import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
 
 interface TaskAttribute {
   trait_type: string;
@@ -68,7 +67,7 @@ export const TaskCard = ({
   // Get the Proxy contract address (BadgeSystem is accessed through proxy)
   const PROXY_ADDRESS =
     process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-    "0xd92A5f52a91C90d6f68Dc041E839035aE83346ac";
+    "0xfC336f4521eC2d95827d5c630A04587BFf4a160d";
 
   const getValidationTypeLabel = (type: string) => {
     const types: Record<string, string> = {

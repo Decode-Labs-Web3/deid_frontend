@@ -266,7 +266,7 @@ import { backendGet } from "@/utils/backend.utils";
 const data = await backendGet("/api/v1/user/profile");
 
 // ❌ Avoid
-const response = await fetch("http://localhost:8000/api/v1/user/profile");
+const response = await fetch("http://localhost:8888/api/v1/user/profile");
 ```
 
 ### 2. Include Credentials in API Routes

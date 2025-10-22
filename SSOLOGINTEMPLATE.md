@@ -385,7 +385,7 @@ message: "Method Not Allowed",
 }
 
 insomnia call for sso login
-http://0.0.0.0:8000/api/v1/decode/sso-validate
+http://0.0.0.0:8888/api/v1/decode/sso-validate
 {
 "sso_token":"877540"
 }

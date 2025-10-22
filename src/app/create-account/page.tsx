@@ -25,7 +25,7 @@ import {
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
   process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-  "0xd92A5f52a91C90d6f68Dc041E839035aE83346ac";
+  "0xfC336f4521eC2d95827d5c630A04587BFf4a160d";
 
 // Import the actual ABI from the contract JSON files
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
@@ -234,7 +234,7 @@ const CreateAccount = () => {
       // Fetch profile creation data from backend
       console.log("📡 Fetching profile creation data...");
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
       const response = await fetch(`${backendUrl}/api/v1/sync/create-profile`, {
         method: "POST",
         headers: {
@@ -554,7 +554,7 @@ const CreateAccount = () => {
                         fetch(
                           `${
                             process.env.DEID_AUTH_BACKEND ||
-                            "http://localhost:8000"
+                            "http://localhost:8888"
                           }/api/v1/decode/my-profile`,
                           {
                             method: "GET",

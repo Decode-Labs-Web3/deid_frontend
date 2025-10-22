@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const types = searchParams.getAll("type");
 
     // Build backend API URL with filters
-    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
     const params = new URLSearchParams();
     params.append("page", page);
     params.append("page_size", pageSize);

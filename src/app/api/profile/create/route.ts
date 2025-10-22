@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
     const backendApiUrl = `${backendUrl}/api/v1/decode/profile/create?wallet=${walletAddress}`;
 
     console.log(

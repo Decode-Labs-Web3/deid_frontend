@@ -33,11 +33,11 @@ Add these to your `.env.local` file:
 
 ```bash
 # Backend API URL
-DEID_AUTH_BACKEND=http://0.0.0.0:8000
+DEID_AUTH_BACKEND=http://0.0.0.0:8888
 
 # Backend API URL (REQUIRED)
 # Backend handles contract interactions
-DEID_AUTH_BACKEND=http://0.0.0.0:8000
+DEID_AUTH_BACKEND=http://0.0.0.0:8888
 
 # IPFS Gateway (optional)
 NEXT_PUBLIC_IPFS_GATEWAY=https://ipfs.io
@@ -273,7 +273,7 @@ Badge minted ✅
 
 **Key Points**:
 
-- Same proxy address as profile creation (`0xd92A5f52a91C90d6f68Dc041E839035aE83346ac`)
+- Same proxy address as profile creation (`0xfC336f4521eC2d95827d5c630A04587BFf4a160d`)
 - BadgeSystem is the implementation behind the proxy
 - Calls go through proxy, not directly to BadgeSystem
 - This enables upgradeability and unified access control
