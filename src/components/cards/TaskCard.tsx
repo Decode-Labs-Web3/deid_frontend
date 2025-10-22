@@ -1,9 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Trophy, CheckCircle, ExternalLink, Coins } from "lucide-react";
+import {
+  Trophy,
+  CheckCircle,
+  ExternalLink,
+  Coins,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { useAccount, useWalletClient } from "wagmi";
+import { toastError, toastSuccess } from "@/utils/toast.utils";
+import { handleUnauthorized } from "@/utils/backend.utils";
+import { ethers } from "ethers";
+import DEID_BADGE_ABI from "@/contracts/verification/BadgeSystem.sol/BadgeSystem.json";
 
 interface TaskAttribute {
   trait_type: string;
@@ -29,9 +40,11 @@ interface TaskCardProps {
   tx_hash?: string;
   block_number?: number;
   created_at: string;
+  onVerificationSuccess?: () => void;
 }
 
 export const TaskCard = ({
+  id,
   task_title,
   task_description,
   validation_type,
@@ -40,8 +53,21 @@ export const TaskCard = ({
   minimum_balance,
   badge_details,
   tx_hash,
+  onVerificationSuccess,
 }: TaskCardProps) => {
   const [imageError, setImageError] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<
+    "idle" | "validating" | "minting" | "success" | "error"
+  >("idle");
+
+  const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
+
+  // Get the Proxy contract address (BadgeSystem is accessed through proxy)
+  const PROXY_ADDRESS =
+    process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
+    "0xfC336f4521eC2d95827d5c630A04587BFf4a160d";
 
   const getValidationTypeLabel = (type: string) => {
     const types: Record<string, string> = {
@@ -65,6 +91,190 @@ export const TaskCard = ({
   const badgeImageUrl = badge_details.badge_image.startsWith("Qm")
     ? `${ipfsGateway}/ipfs/${badge_details.badge_image}`
     : badge_details.badge_image;
+
+  const handleVerifyTask = async () => {
+    if (!isConnected || !address) {
+      toastError("Please connect your wallet first");
+      return;
+    }
+
+    if (!PROXY_ADDRESS) {
+      toastError("Proxy contract address not configured");
+      return;
+    }
+
+    try {
+      setIsVerifying(true);
+      setVerificationStatus("validating");
+
+      // Step 1: Validate task with backend (uses session for wallet address)
+      console.log("🔍 Step 1: Validating task with backend...");
+      console.log("📍 User wallet:", address);
+      const validationResponse = await fetch(`/api/task/${id}/validate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!validationResponse.ok) {
+        const errorData = await validationResponse.json();
+
+        // Handle 401 Unauthorized - logout user
+        if (validationResponse.status === 401 || errorData.shouldLogout) {
+          console.log("🔒 Session expired - logging out");
+          handleUnauthorized();
+          return; // Stop execution
+        }
+
+        throw new Error(errorData.error || "Task validation failed");
+      }
+
+      const validationData = await validationResponse.json();
+
+      if (!validationData.success || !validationData.data) {
+        throw new Error(validationData.message || "Validation failed");
+      }
+
+      const { signature, task_id } = validationData.data;
+
+      if (!signature) {
+        throw new Error("No signature received from validation");
+      }
+
+      console.log("✅ Task validated successfully");
+      console.log("📝 Signature:", signature);
+      console.log("📋 Task ID from backend:", task_id);
+      console.log("📋 Task ID type:", typeof task_id);
+      console.log("📋 Task ID length:", task_id?.length);
+
+      // Step 2: Add 0x prefix to signature if not present
+      const formattedSignature = signature.startsWith("0x")
+        ? signature
+        : `0x${signature}`;
+
+      console.log("🔗 Formatted signature:", formattedSignature);
+
+      // Step 3: Call mintBadge on BadgeSystem contract through proxy
+      setVerificationStatus("minting");
+      console.log("⛓️  Step 2: Minting badge on-chain through proxy...");
+      console.log("📋 Task ID:", task_id);
+      console.log("🏭 Proxy Contract:", PROXY_ADDRESS);
+
+      if (!walletClient) {
+        throw new Error("Wallet client not available");
+      }
+
+      // Check if wallet client is on the correct chain (Sepolia)
+      if (walletClient.chain?.id !== 11155111) {
+        console.error("❌ Wallet client is not on Ethereum Sepolia!");
+        console.error("   Current chain ID:", walletClient.chain?.id);
+        console.error("   Expected chain ID: 11155111");
+        throw new Error("Please switch to Ethereum Sepolia in your wallet");
+      }
+
+      // Create ethers provider from wallet client
+      const provider = new ethers.BrowserProvider(walletClient);
+      const signer = await provider.getSigner();
+
+      const DEiDBadgeFactory = new ethers.ContractFactory(
+        DEID_BADGE_ABI.abi,
+        DEID_BADGE_ABI.bytecode,
+        signer
+      );
+      const contract = DEiDBadgeFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
+      console.log("✅ Connected to DEiDBadge contract");
+
+      try {
+        const code = await provider.getCode(PROXY_ADDRESS as string);
+        if (code === "0x") {
+          console.error("❌ Contract not deployed at proxy address");
+          console.error("   Address:", PROXY_ADDRESS);
+          console.error("   Network: Ethereum Sepolia");
+          console.error(
+            "   This address might be deployed on a different network"
+          );
+          throw new Error("Contract not deployed at proxy address");
+        }
+        console.log("✅ Contract is deployed, code length:", code.length);
+      } catch (error) {
+        console.error("❌ Contract deployment check failed:", error);
+        throw new Error(
+          `Contract deployment verification failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+
+      // Check badge existence
+      const badgeExists = await contract.badgeExists(task_id);
+      if (!badgeExists) {
+        console.log("❌ Badge does not exist");
+        toastError("Badge does not exist");
+        return;
+      }
+      console.log("✅ Badge exists");
+
+      const tx = await contract.mintBadge(task_id, formattedSignature, {
+        gasLimit: 500000,
+        maxFeePerGas: ethers.parseUnits("100", "gwei"),
+        maxPriorityFeePerGas: ethers.parseUnits("2", "gwei"),
+      });
+      console.log("⏳ Transaction sent:", tx.hash);
+      console.log("⏳ Waiting for confirmation...");
+      const receipt = await tx.wait();
+      if (receipt.status === 1) {
+        console.log("✅ Badge minted successfully!");
+        console.log("   Block Number:", receipt.blockNumber);
+        console.log("   Gas Used:", receipt.gasUsed.toString());
+        console.log(
+          "🔗 Explorer Link:",
+          `https://sepolia.etherscan.io/tx/${tx.hash}`
+        );
+        setVerificationStatus("success");
+        toastSuccess(
+          "Badge Minted Successfully! 🎉",
+          "Your badge has been minted on-chain"
+        );
+        if (onVerificationSuccess) {
+          onVerificationSuccess();
+        }
+      }
+    } catch (error) {
+      console.error("❌ Verification error:", error);
+      setVerificationStatus("error");
+      const errorMessage =
+        error instanceof Error ? error.message : "Verification failed";
+      toastError(errorMessage);
+    } finally {
+      setIsVerifying(false);
+      // Reset status after a delay
+      setTimeout(() => {
+        setVerificationStatus("idle");
+      }, 3000);
+    }
+  };
+
+  const getButtonText = () => {
+    switch (verificationStatus) {
+      case "validating":
+        return "Validating...";
+      case "minting":
+        return "Minting Badge...";
+      case "success":
+        return "Badge Minted! ✓";
+      case "error":
+        return "Try Again";
+      default:
+        return "Verify Task";
+    }
+  };
+
+  const isButtonDisabled =
+    isVerifying || verificationStatus === "success" || !isConnected;
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden hover:border-[#CA4A87] transition-all group">
@@ -159,10 +369,24 @@ export const TaskCard = ({
         {/* Action Button */}
         <Button
           size="sm"
-          className="w-full bg-[#CA4A87]/10 text-[#CA4A87] hover:bg-[#CA4A87] hover:text-white transition-colors text-xs h-8"
+          onClick={handleVerifyTask}
+          disabled={isButtonDisabled}
+          className={`w-full text-xs h-8 transition-colors ${
+            verificationStatus === "success"
+              ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+              : verificationStatus === "error"
+              ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+              : "bg-[#CA4A87]/10 text-[#CA4A87] hover:bg-[#CA4A87] hover:text-white"
+          } ${!isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          <CheckCircle className="w-3 h-3 mr-1.5" />
-          Verify Task
+          {isVerifying ? (
+            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+          ) : verificationStatus === "success" ? (
+            <CheckCircle className="w-3 h-3 mr-1.5" />
+          ) : (
+            <CheckCircle className="w-3 h-3 mr-1.5" />
+          )}
+          {getButtonText()}
         </Button>
       </div>
     </div>

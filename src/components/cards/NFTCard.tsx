@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { useState } from "react";
+import { convertIPFSUrlToHttp } from "@/utils/ipfs.utils";
 
 interface NFTCardProps {
   token_address: string;
@@ -19,7 +20,6 @@ export const NFTCard = ({
   token_address,
   token_id,
   name,
-  description,
   image,
   contract_type,
   symbol,
@@ -37,7 +37,20 @@ export const NFTCard = ({
     setImageLoading(false);
   };
 
-  const displayImage = image && !imageError ? image : "/nft-404.png";
+  // Convert IPFS URL to HTTP URL for Next.js Image component
+  const getDisplayImage = () => {
+    if (!image || imageError) return "/nft-404.png";
+
+    // Check if it's an IPFS URL
+    if (image.startsWith("ipfs://")) {
+      return convertIPFSUrlToHttp(image);
+    }
+
+    // Return as-is if it's already an HTTP URL
+    return image;
+  };
+
+  const displayImage = getDisplayImage();
   const displayName = name || `NFT #${token_id}`;
   const shortAddress = `${token_address.slice(0, 6)}...${token_address.slice(
     -4

@@ -72,7 +72,7 @@ export const WalletValidator = () => {
 
       // Use the same backend URL pattern as the profile page
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
       const apiUrl = `${backendUrl}/api/v1/decode/my-profile`;
 
       const response = await fetch(apiUrl, {

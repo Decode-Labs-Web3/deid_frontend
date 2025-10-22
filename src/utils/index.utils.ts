@@ -10,3 +10,14 @@ export const generateRequestId = (): string => {
 export const apiPathName = (req: Request): string => {
   return new URL(req.url).pathname;
 };
+
+// Re-export backend utilities
+export {
+  handleUnauthorized,
+  backendFetch,
+  backendFetchJSON,
+  backendPost,
+  backendGet,
+  backendPut,
+  backendDelete,
+} from "./backend.utils";
