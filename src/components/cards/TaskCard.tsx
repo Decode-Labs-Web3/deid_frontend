@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Trophy,
   CheckCircle,
@@ -41,6 +41,7 @@ interface TaskCardProps {
   block_number?: number;
   created_at: string;
   onVerificationSuccess?: () => void;
+  showCompletedTasks?: boolean;
 }
 
 export const TaskCard = ({
@@ -54,12 +55,15 @@ export const TaskCard = ({
   badge_details,
   tx_hash,
   onVerificationSuccess,
+  showCompletedTasks = true,
 }: TaskCardProps) => {
   const [imageError, setImageError] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "validating" | "minting" | "success" | "error"
   >("idle");
+  const [hasBadge, setHasBadge] = useState<boolean | null>(null);
+  const [isCheckingBadge, setIsCheckingBadge] = useState(false);
 
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -76,6 +80,47 @@ export const TaskCard = ({
     };
     return types[type] || type;
   };
+
+  // Check if user has the badge for this task
+  const checkBadgeStatus = useCallback(async () => {
+    if (!address || !isConnected) {
+      setHasBadge(false);
+      return;
+    }
+
+    try {
+      setIsCheckingBadge(true);
+
+      // Create ethers provider from wallet client
+      const provider = new ethers.BrowserProvider(walletClient!);
+
+      // Connect to BadgeSystem contract through proxy
+      const BadgeSystemFactory = new ethers.ContractFactory(
+        DEID_BADGE_ABI.abi,
+        DEID_BADGE_ABI.bytecode,
+        provider
+      );
+      const badgeSystem = BadgeSystemFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
+
+      // Call hasBadge function
+      const userHasBadge = await badgeSystem.hasBadge(address, id);
+      setHasBadge(userHasBadge);
+
+      console.log(`🔍 Badge status for task ${id}:`, userHasBadge);
+    } catch (error) {
+      console.error("❌ Error checking badge status:", error);
+      setHasBadge(false);
+    } finally {
+      setIsCheckingBadge(false);
+    }
+  }, [address, isConnected, id, walletClient, PROXY_ADDRESS]);
+
+  // Check badge status when component mounts or address changes
+  useEffect(() => {
+    checkBadgeStatus();
+  }, [address, isConnected, id, checkBadgeStatus]);
 
   const getNetworkLabel = (network: string) => {
     const networks: Record<string, string> = {
@@ -239,6 +284,9 @@ export const TaskCard = ({
           "Badge Minted Successfully! 🎉",
           "Your badge has been minted on-chain"
         );
+        // Refresh badge status after successful verification
+        await checkBadgeStatus();
+
         if (onVerificationSuccess) {
           onVerificationSuccess();
         }
@@ -259,6 +307,17 @@ export const TaskCard = ({
   };
 
   const getButtonText = () => {
+    // If user has the badge, show verified status
+    if (hasBadge === true) {
+      return "Task Verified ✓";
+    }
+
+    // If checking badge status, show loading
+    if (isCheckingBadge) {
+      return "Checking...";
+    }
+
+    // Otherwise show verification status
     switch (verificationStatus) {
       case "validating":
         return "Validating...";
@@ -274,10 +333,25 @@ export const TaskCard = ({
   };
 
   const isButtonDisabled =
-    isVerifying || verificationStatus === "success" || !isConnected;
+    isVerifying ||
+    verificationStatus === "success" ||
+    !isConnected ||
+    hasBadge === true ||
+    isCheckingBadge;
+
+  // Hide task if it's completed and showCompletedTasks is false
+  if (hasBadge === true && !showCompletedTasks) {
+    return null;
+  }
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden hover:border-[#CA4A87] transition-all group">
+    <div
+      className={`bg-card border rounded-lg overflow-hidden transition-all group ${
+        hasBadge === true
+          ? "border-pink-600 border-2 shadow-xl shadow-pink-400/20"
+          : "border-border hover:border-[#CA4A87]"
+      }`}
+    >
       {/* Badge Image */}
       <div className="relative aspect-square bg-muted overflow-hidden">
         {!imageError ? (
@@ -372,17 +446,25 @@ export const TaskCard = ({
           onClick={handleVerifyTask}
           disabled={isButtonDisabled}
           className={`w-full text-xs h-8 transition-colors ${
-            verificationStatus === "success"
+            hasBadge === true
+              ? "bg-yellow-500/10 text-yellow-600 cursor-not-allowed"
+              : verificationStatus === "success"
               ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
               : verificationStatus === "error"
               ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+              : isCheckingBadge
+              ? "bg-gray-500/10 text-gray-500 cursor-not-allowed"
               : "bg-[#CA4A87]/10 text-[#CA4A87] hover:bg-[#CA4A87] hover:text-white"
           } ${!isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           {isVerifying ? (
             <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+          ) : hasBadge === true ? (
+            <Trophy className="w-3 h-3 mr-1.5" />
           ) : verificationStatus === "success" ? (
             <CheckCircle className="w-3 h-3 mr-1.5" />
+          ) : isCheckingBadge ? (
+            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
           ) : (
             <CheckCircle className="w-3 h-3 mr-1.5" />
           )}

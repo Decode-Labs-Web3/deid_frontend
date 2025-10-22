@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BadgeCard } from "@/components/cards/BadgeCard";
 import { SocialAccountItem } from "@/components/cards/SocialAccountItem";
 import { X, Fingerprint } from "lucide-react";
 import Image from "next/image";
@@ -17,6 +16,15 @@ import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json"
 import DEID_PROXY_ABI from "@/contracts/core/DEiDProxy.sol/DEiDProxy.json";
 import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 import { toastInfo, toastError, toastSuccess } from "@/utils/toast.utils";
+import {
+  VerifyBadgeCard,
+  EmptyBadgeState,
+} from "@/components/cards/VerifyBadgeCard";
+import {
+  fetchAllUserBadges,
+  getIPFSGateways,
+  type UserBadge,
+} from "@/utils/badge.utils";
 
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
@@ -102,6 +110,9 @@ const Identity = () => {
     null
   );
   const [refreshingAccounts, setRefreshingAccounts] = useState(false);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [badgesLoading, setBadgesLoading] = useState(false);
+  const [badgesError, setBadgesError] = useState<string | null>(null);
   const { address: connectedAddress, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
 
@@ -216,7 +227,7 @@ const Identity = () => {
     // Fetch identity data on component mount
     console.log("🎯 Identity component mounted, starting data fetch...");
     fetchIdentityData();
-  }, []);
+  }, [router]);
 
   // Fetch avatar from IPFS when profile metadata is available
   useEffect(() => {
@@ -228,18 +239,13 @@ const Identity = () => {
         setAvatarLoading(true);
         console.log("🌐 Fetching avatar from IPFS hash:", avatarHash);
 
-        // Try multiple IPFS gateways with fallback (same as ProfileCard)
-        const gateways = [
-          `${
-            process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-            "http://35.247.142.76:8080/ipfs"
-          }/${avatarHash}`,
-          `https://ipfs.io/ipfs/${avatarHash}`,
-          `https://gateway.pinata.cloud/ipfs/${avatarHash}`,
-          `https://cloudflare-ipfs.com/ipfs/${avatarHash}`,
-        ];
+        // Try multiple IPFS gateways with fallback using centralized utility
+        const gateways = getIPFSGateways();
+        const gatewayUrls = gateways.map(
+          (gateway) => `${gateway}/${avatarHash}`
+        );
 
-        for (const gatewayUrl of gateways) {
+        for (const gatewayUrl of gatewayUrls) {
           try {
             const response = await fetch(gatewayUrl, {
               method: "HEAD", // Just check if the resource exists
@@ -275,12 +281,13 @@ const Identity = () => {
   }, [onChainData?.profile_metadata?.avatar_ipfs_hash]);
 
   // Fetch verified social accounts on component mount
-  // Fetch verified accounts and on-chain accounts on mount
+  // Fetch verified accounts, on-chain accounts, and user badges on mount
   useEffect(() => {
     fetchVerifiedAccounts();
 
     if (connectedAddress) {
       fetchOnChainAccounts(connectedAddress);
+      fetchUserBadges(connectedAddress);
     }
   }, [connectedAddress]);
 
@@ -551,6 +558,19 @@ const Identity = () => {
       setOnChainAccounts([]);
       return [];
     }
+  };
+
+  // Fetch user badges using utility function
+  const fetchUserBadges = async (walletAddress: string) => {
+    setBadgesLoading(true);
+    setBadgesError(null);
+    console.log("🏆 Starting badge fetch process for wallet:", walletAddress);
+
+    const badges = await fetchAllUserBadges(walletAddress);
+    console.log("✅ Badge fetch completed, setting badges:", badges);
+
+    setUserBadges(badges);
+    setBadgesLoading(false);
   };
 
   // Fetch verified social accounts
@@ -867,14 +887,6 @@ const Identity = () => {
   // Note: socialAccounts from IPFS data is no longer used
   // We now fetch verified accounts directly from backend API
 
-  const badges = Array(9).fill({
-    title: "Golden Bitcoin Holder",
-    description: "Hold >1 BTC",
-  });
-
-  // Helper to check if the avatarUrl is an external URL (e.g., IPFS)
-  const isExternalUrl = (url: string) => /^https?:\/\//.test(url);
-
   if (loading) {
     return (
       <AppLayout>
@@ -909,26 +921,13 @@ const Identity = () => {
                 {/* Gradient frame */}
                 <div className="w-full h-full rounded-2xl bg-gradient-to-br from-[#CA4A87] via-[#b13e74] to-[#a0335f] p-0.5">
                   <div className="w-full h-full rounded-2xl bg-background overflow-hidden">
-                    {isExternalUrl(avatarUrl) ? (
-                      // Use <img> for external URLs (e.g., IPFS) to avoid next/image config issues
-                      <img
-                        src={avatarUrl}
-                        alt="Profile"
-                        width={112}
-                        height={112}
-                        className="w-full h-full object-cover"
-                        style={{ objectFit: "cover" }}
-                      />
-                    ) : (
-                      // Use next/image for local/static images
-                      <Image
-                        src={avatarUrl}
-                        alt="Profile"
-                        width={112}
-                        height={112}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
+                    <Image
+                      src={avatarUrl}
+                      alt="Profile"
+                      width={112}
+                      height={112}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
                 {avatarLoading && (
@@ -1100,15 +1099,47 @@ const Identity = () => {
               <h3 className="text-xl font-bold mb-6 border-b border-border pb-4">
                 DEiD Badges
               </h3>
-              <div className="grid grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                {badges.map((badge, i) => (
-                  <BadgeCard
-                    key={i}
-                    title={badge.title}
-                    description={badge.description}
-                  />
-                ))}
-              </div>
+
+              {/* Badge Loading State */}
+              {badgesLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#CA4A87]" />
+                  <span className="ml-2 text-muted-foreground">
+                    Loading badges...
+                  </span>
+                </div>
+              )}
+
+              {/* Badge Error State */}
+              {badgesError && (
+                <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-800 dark:text-red-200 text-sm">
+                    {badgesError}
+                  </span>
+                </div>
+              )}
+
+              {/* Badges Grid */}
+              {!badgesLoading && !badgesError && (
+                <div className="grid grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {userBadges.length > 0 ? (
+                    userBadges.map((badge) => (
+                      <VerifyBadgeCard
+                        key={badge.tokenId}
+                        badge={badge}
+                        onImageError={() => {
+                          console.warn(
+                            `🖼️ Image error for badge ${badge.tokenId}`
+                          );
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <EmptyBadgeState />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Sync On-Chain Profile Section */}

@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     console.log("🔍 Fetching NFTs for wallet:", walletAddress);
 
     // Try Sepolia first, then fallback to Ethereum mainnet
-    const chains = ["sepolia", "eth"];
+    const chains = ["eth"];
     let nfts: MoralisNFTResponse[] = [];
     let usedChain = "";
 
