@@ -21,3 +21,20 @@ export {
   backendPut,
   backendDelete,
 } from "./backend.utils";
+
+// Re-export badge utilities
+export {
+  getBadgeRarityColor,
+  getRarityBadgeClasses,
+  getIPFSGateways,
+  convertIPFSUrlToHttp,
+  fetchIPFSMetadata,
+  fetchIPFSImageUrl,
+  getUserBadgeTokenIds,
+  getBadgeTokenURI,
+  fetchBadgeData,
+  fetchAllUserBadges,
+  type BadgeAttribute,
+  type BadgeMetadata,
+  type UserBadge,
+} from "./badge.utils";

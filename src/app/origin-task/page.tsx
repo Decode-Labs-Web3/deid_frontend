@@ -75,6 +75,7 @@ const OriginTask = () => {
   // Multi-select filter state
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
 
   // Form state
   const [taskTitle, setTaskTitle] = useState("");
@@ -963,6 +964,31 @@ const OriginTask = () => {
                       ))}
                     </div>
                   </div>
+
+                  {/* Show Completed Tasks Toggle */}
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      <span className="text-foreground font-semibold">
+                        Show Completed:
+                      </span>
+                    </label>
+                    <div className="flex items-center space-x-1.5">
+                      <Checkbox
+                        id="show-completed"
+                        checked={showCompletedTasks}
+                        onCheckedChange={(checked) =>
+                          setShowCompletedTasks(checked as boolean)
+                        }
+                        className="border-[#CA4A87] data-[state=checked]:bg-[#CA4A87] data-[state=checked]:border-[#CA4A87]"
+                      />
+                      <label
+                        htmlFor="show-completed"
+                        className="text-sm cursor-pointer select-none"
+                      >
+                        Include
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Results Count - Only show if there are tasks in DB */}
@@ -1018,6 +1044,7 @@ const OriginTask = () => {
                     tx_hash={task.tx_hash}
                     block_number={task.block_number}
                     created_at={task.created_at}
+                    showCompletedTasks={showCompletedTasks}
                   />
                 ))}
               </div>
