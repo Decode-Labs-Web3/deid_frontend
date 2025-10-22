@@ -29,7 +29,7 @@ BADGE_SYSTEM_ABI = [
 ]
 
 # Use the PROXY address, not a separate BadgeSystem address
-PROXY_ADDRESS = "0xAF993e50103D8a19a5FD66EF3a45a18D1A713E2f"
+PROXY_ADDRESS = "0xd92A5f52a91C90d6f68Dc041E839035aE83346ac"
 ```
 
 ### 2. ContractClient Usage
@@ -83,7 +83,7 @@ async def mint_badge(
 
 ## Key Points
 
-1. **Use Proxy Address**: `0xAF993e50103D8a19a5FD66EF3a45a18D1A713E2f`
+1. **Use Proxy Address**: `0xd92A5f52a91C90d6f68Dc041E839035aE83346ac`
 2. **Use BadgeSystem ABI**: Not the DEiDProxy ABI
 3. **Proxy Delegation**: The proxy will delegate the call to the BadgeSystem implementation
 4. **Same Pattern**: This follows the same pattern as profile creation
@@ -117,7 +117,7 @@ Badge minted ✅
 
 ```bash
 # Backend environment
-PROXY_ADDRESS=0xAF993e50103D8a19a5FD66EF3a45a18D1A713E2f
+PROXY_ADDRESS=0xd92A5f52a91C90d6f68Dc041E839035aE83346ac
 BADGE_SYSTEM_ABI=[...]  # Full BadgeSystem ABI
 ```
 

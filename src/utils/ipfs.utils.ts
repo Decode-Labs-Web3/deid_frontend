@@ -151,6 +151,24 @@ const parseWalletData = (walletData: any) => {
 };
 
 /**
+ * Convert IPFS URL to HTTP URL for Next.js Image component
+ * @param ipfsUrl - The IPFS URL (ipfs://hash or just hash)
+ * @returns string - The HTTP URL for the IPFS content
+ */
+export const convertIPFSUrlToHttp = (ipfsUrl: string): string => {
+  if (!ipfsUrl) return "";
+
+  // Remove ipfs:// prefix if present
+  const cleanHash = ipfsUrl.replace(/^ipfs:\/\//, "");
+
+  // Use primary gateway or fallback to public gateway
+  const primaryGateway =
+    process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
+    "http://35.247.142.76:8080/ipfs";
+  return `${primaryGateway}/${cleanHash}`;
+};
+
+/**
  * Fetch avatar image from IPFS
  * @param ipfsHash - The IPFS hash for the avatar image
  * @returns Promise<string | null> - The image URL or null if failed

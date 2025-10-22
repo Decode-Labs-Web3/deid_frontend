@@ -273,7 +273,7 @@ Badge minted ✅
 
 **Key Points**:
 
-- Same proxy address as profile creation (`0xAF993e50103D8a19a5FD66EF3a45a18D1A713E2f`)
+- Same proxy address as profile creation (`0xd92A5f52a91C90d6f68Dc041E839035aE83346ac`)
 - BadgeSystem is the implementation behind the proxy
 - Calls go through proxy, not directly to BadgeSystem
 - This enables upgradeability and unified access control
