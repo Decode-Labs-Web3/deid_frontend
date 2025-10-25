@@ -2,17 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  User,
-  Fingerprint,
-  Target,
-  Settings,
-  LogOut,
-  Search,
-} from "lucide-react";
+import { User, Fingerprint, Target, Settings, Search } from "lucide-react";
 import Image from "next/image";
-import { logout, isAdmin } from "@/utils/session.utils";
-import { useState, useEffect } from "react";
 
 const navigationItems = [
   { name: "Profile", path: "/profile", icon: User },
@@ -24,12 +15,6 @@ const navigationItems = [
 
 export const Sidebar = () => {
   const pathname = usePathname();
-  const [userIsAdmin, setUserIsAdmin] = useState(false);
-
-  useEffect(() => {
-    // Check admin status on mount and when pathname changes
-    setUserIsAdmin(isAdmin());
-  }, [pathname]);
 
   return (
     <div className="w-55 bg-sidebar border-r border-sidebar-border flex flex-col h-screen fixed left-0 top-0">
@@ -68,13 +53,6 @@ export const Sidebar = () => {
               By Decode Labs
             </span>
           </div>
-          <button
-            onClick={logout}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded-lg transition-all hover:shadow-[0_0_8px_2px_rgba(202,74,135,0.5)]"
-            title="Logout"
-          >
-            <LogOut className="w-5 h-8" />
-          </button>
         </div>
       </div>
     </div>

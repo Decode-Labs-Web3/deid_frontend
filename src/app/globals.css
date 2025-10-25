@@ -13,8 +13,21 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Light theme (default) */
+.light {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+/* Dark theme */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* System preference fallback */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light):not(.dark) {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
