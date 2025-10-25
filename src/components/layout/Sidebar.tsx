@@ -6,11 +6,9 @@ import {
   User,
   Fingerprint,
   Target,
-  Store,
-  Vote,
   Settings,
   LogOut,
-  Shield,
+  Search,
 } from "lucide-react";
 import Image from "next/image";
 import { logout, isAdmin } from "@/utils/session.utils";
@@ -20,8 +18,7 @@ const navigationItems = [
   { name: "Profile", path: "/profile", icon: User },
   { name: "Identity", path: "/identity", icon: Fingerprint },
   { name: "Origin Task", path: "/origin-task", icon: Target },
-  { name: "Marketplace", path: "/task-marketplace", icon: Store },
-  { name: "Trust Vote", path: "/trust-vote", icon: Vote },
+  { name: "Search Profile", path: "/search-profile", icon: Search },
   { name: "Settings", path: "/setting", icon: Settings },
 ];
 
@@ -61,24 +58,6 @@ export const Sidebar = () => {
             </Link>
           );
         })}
-
-        {/* Admin Dashboard Link - Only visible to admins */}
-        {userIsAdmin && (
-          <>
-            <div className="my-4 border-t border-sidebar-border/50" />
-            <Link
-              href="/admin"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                pathname === "/admin"
-                  ? "bg-gradient-to-r from-pink-500/20 to-pink-600/20 border-l-4 border-pink-500 text-pink-500 font-semibold"
-                  : "text-pink-400 hover:bg-pink-500/10 hover:text-pink-500"
-              }`}
-            >
-              <Shield className="w-6 h-6" />
-              <span className="text-sm">Admin Dashboard</span>
-            </Link>
-          </>
-        )}
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">

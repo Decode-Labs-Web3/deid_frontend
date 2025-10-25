@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Get backend URL from environment
-    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://0.0.0.0:8888";
+    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://0.0.0.0:8000";
     const apiUrl = `${backendUrl}/api/v1/task/create`;
 
     console.log("🌐 Sending task to backend:", apiUrl);

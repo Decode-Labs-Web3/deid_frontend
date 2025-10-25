@@ -39,7 +39,7 @@ export async function backendFetch(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
+  const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
   const url = `${backendUrl}${endpoint}`;
 
   console.log(`🌐 Backend API: ${options.method || "GET"} ${endpoint}`);

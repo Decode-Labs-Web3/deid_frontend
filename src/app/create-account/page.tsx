@@ -234,7 +234,7 @@ const CreateAccount = () => {
       // Fetch profile creation data from backend
       console.log("📡 Fetching profile creation data...");
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8888";
+        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
       const response = await fetch(`${backendUrl}/api/v1/sync/create-profile`, {
         method: "POST",
         headers: {
@@ -554,7 +554,7 @@ const CreateAccount = () => {
                         fetch(
                           `${
                             process.env.DEID_AUTH_BACKEND ||
-                            "http://localhost:8888"
+                            "http://localhost:8000"
                           }/api/v1/decode/my-profile`,
                           {
                             method: "GET",
