@@ -6,7 +6,6 @@ import { StreakTracker } from "@/components/layout/StreakTracker";
 import { ProfileCard } from "@/components/cards/ProfileCard";
 import { StatCard } from "@/components/cards/StatCard";
 import { TrustWheel } from "@/components/charts/TrustWheel";
-import { MetricCard } from "@/components/cards/MetricCard";
 import { NFTCard } from "@/components/cards/NFTCard";
 import { checkOnChainProfile, OnChainProfileData } from "@/utils/onchain.utils";
 import { getPrimaryWalletAddress } from "@/utils/session.utils";
@@ -275,30 +274,6 @@ const Profile = () => {
           </div>
 
           <TrustWheel />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <MetricCard
-            title="Trust Score"
-            value={profileData?.trustScore || 0}
-            change={12}
-            status="Above average"
-            color="#4F46E5"
-          />
-          <MetricCard
-            title="Weekly Task"
-            value={62}
-            change={4}
-            status="Slightly above average"
-            color="#06B6D4"
-          />
-          <MetricCard
-            title="Trust Voted"
-            value={31}
-            change={-12}
-            status="Below average"
-            color="#EF4444"
-          />
         </div>
 
         <div>
