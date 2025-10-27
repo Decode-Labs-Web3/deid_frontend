@@ -13,7 +13,7 @@ interface SearchResultCardProps {
   avatarIpfsHash?: string;
   hasOnChainProfile: boolean;
   walletAddress?: string;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 export const SearchResultCard = ({
@@ -95,10 +95,17 @@ export const SearchResultCard = ({
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  // Only clickable if has on-chain profile AND onClick is provided
+  const isClickable = hasOnChainProfile && onClick;
+
   return (
     <Card
-      className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border hover:border-primary/50"
-      onClick={onClick}
+      className={`group transition-all duration-200 border-border ${
+        isClickable
+          ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] hover:border-primary/50"
+          : "cursor-not-allowed opacity-60 bg-muted/30"
+      }`}
+      onClick={isClickable ? onClick : undefined}
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
@@ -148,28 +155,36 @@ export const SearchResultCard = ({
                   className="text-xs px-2 py-0.5 flex items-center gap-1"
                 >
                   <AlertTriangle className="w-3 h-3" />
-                  No DEiD
+                  No DEiD On-Chain Profile
                 </Badge>
               )}
             </div>
 
             <p className="text-muted-foreground text-sm truncate">
               @{username}
-              <span
-                className="text-xs ml-1 font-bold"
-                style={{
-                  color: "#ff72e1",
-                  textShadow:
-                    "0 0 1px #ff72e1, 0 0 1px #ffb6f9, 0 0 1px #e75480",
-                }}
-              >
-                .deid
-              </span>
+              {hasOnChainProfile && (
+                <span
+                  className="text-xs ml-1 font-bold"
+                  style={{
+                    color: "#ff72e1",
+                    textShadow:
+                      "0 0 1px #ff72e1, 0 0 1px #ffb6f9, 0 0 1px #e75480",
+                  }}
+                >
+                  .deid
+                </span>
+              )}
             </p>
 
             {walletAddress && (
               <p className="text-xs text-muted-foreground font-mono mt-1">
                 {formatWalletAddress(walletAddress)}
+              </p>
+            )}
+
+            {!isClickable && (
+              <p className="text-xs text-muted-foreground mt-1 italic">
+                Profile not available
               </p>
             )}
           </div>

@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   User,
   Calendar,
-  Clock,
   ExternalLink,
 } from "lucide-react";
 import Image from "next/image";
@@ -454,8 +453,11 @@ const UserProfile = () => {
                           isPrimary ? "text-yellow-500" : "text-primary"
                         }`}
                       />
-                      <span className="font-mono text-sm flex-1">
-                        {address}
+                      <span className="font-mono text-sm flex-1 truncate">
+                        <span className="hidden sm:inline">{address}</span>
+                        <span className="sm:hidden">
+                          {address.slice(0, 5)}...{address.slice(-4)}
+                        </span>
                       </span>
                       {isPrimary && (
                         <Badge variant="secondary" className="text-xs">

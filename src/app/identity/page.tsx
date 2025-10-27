@@ -980,7 +980,12 @@ const Identity = () => {
                           isPrimary ? "text-yellow-500" : "text-primary"
                         }`}
                       />
-                      <span className="font-mono text-sm">{address}</span>
+                      <span className="font-mono text-sm flex-1 truncate">
+                        <span className="hidden sm:inline">{address}</span>
+                        <span className="sm:hidden">
+                          {address.slice(0, 5)}...{address.slice(-4)}
+                        </span>
+                      </span>
                       {isPrimary && (
                         <span className="ml-auto text-xs bg-yellow-500 text-black px-2 py-1 rounded-full font-semibold">
                           PRIMARY

@@ -140,7 +140,11 @@ export const ProfileCard = ({
         {primary_wallet_address && (
           <div className="mb-3 mt-4">
             <span className="text-sm font-mono bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded">
-              {formatWalletAddress(primary_wallet_address)}
+              <span className="hidden sm:inline">{primary_wallet_address}</span>
+              <span className="sm:hidden">
+                {primary_wallet_address.slice(0, 5)}...
+                {primary_wallet_address.slice(-4)}
+              </span>
             </span>
           </div>
         )}

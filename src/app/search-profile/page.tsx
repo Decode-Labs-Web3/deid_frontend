@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, AlertCircle, Users, Wallet } from "lucide-react";
+import { SearchAnimation } from "@/components/common/SearchAnimation";
 import { searchUsers } from "@/utils/backend.utils";
 import {
   resolveAddressToProfile,
@@ -145,7 +146,7 @@ const SearchProfile = () => {
                     );
                     // First try to resolve username to get wallet address
                     const resolvedAddress = await resolveUsernameToAddress(
-                      result.username
+                      result.username + ".deid"
                     );
 
                     if (resolvedAddress) {
@@ -371,12 +372,7 @@ const SearchProfile = () => {
         )}
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-muted-foreground">Searching...</span>
-          </div>
-        )}
+        {isLoading && <SearchAnimation />}
 
         {/* Results */}
         {!isLoading && searchResults.length > 0 && (
@@ -402,7 +398,11 @@ const SearchProfile = () => {
                   avatarIpfsHash={result.avatar_ipfs_hash}
                   hasOnChainProfile={result.hasOnChainProfile}
                   walletAddress={result.walletAddress}
-                  onClick={() => handleResultClick(result)}
+                  onClick={
+                    result.hasOnChainProfile
+                      ? () => handleResultClick(result)
+                      : undefined
+                  }
                 />
               ))}
             </div>
