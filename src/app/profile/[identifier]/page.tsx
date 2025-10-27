@@ -9,7 +9,7 @@ import {
 } from "@/components/cards/VerifyBadgeCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatCard } from "@/components/cards/StatCard";
+import { TrustWheel } from "@/components/charts/TrustWheel";
 import { Loader2, AlertCircle, ArrowLeft, User, Calendar } from "lucide-react";
 import Image from "next/image";
 import {
@@ -427,16 +427,6 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Point Dashboard */}
-            <div className="bg-card border border-border rounded-xl p-6 grid grid-cols-3 gap-6">
-              <StatCard title="Task Score" value={45} total={213} />
-              <StatCard title="Social Score" value={28} total={112} />
-              <StatCard title="Chain Score" value={67} total={240} />
-            </div>
-          </div>
-
-          {/* Right Column - DEiD Badges + Social Accounts Summary */}
-          <div className="space-y-8">
             {/* DEiD Badges */}
             <div>
               <h2 className="text-2xl font-bold border-b border-border pb-4 mb-6">
@@ -481,6 +471,12 @@ const UserProfile = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Right Column - Trust Wheel + Social Accounts Summary */}
+          <div className="space-y-8">
+            {/* Trust Wheel */}
+            <TrustWheel />
 
             {/* Social Accounts Summary */}
             <div>
