@@ -10,6 +10,7 @@ interface SocialAccountItemProps {
   onValidate?: () => void;
   isValidating?: boolean;
   isOnChain?: boolean;
+  isReadOnly?: boolean;
 }
 
 const getPlatformIcon = (platform: string) => {
@@ -69,6 +70,7 @@ export const SocialAccountItem = ({
   onValidate,
   isValidating = false,
   isOnChain = false,
+  isReadOnly = false,
 }: SocialAccountItemProps) => {
   const platformIcon = getPlatformIcon(platform);
   const platformName = getPlatformName(platform);
@@ -107,8 +109,8 @@ export const SocialAccountItem = ({
         </div>
       </div>
 
-      {/* Validate Button */}
-      {!isOnChain && (
+      {/* Validate Button or Status */}
+      {!isReadOnly && !isOnChain && (
         <Button
           onClick={onValidate}
           disabled={isValidating}
@@ -128,7 +130,7 @@ export const SocialAccountItem = ({
           )}
         </Button>
       )}
-      {isOnChain && (
+      {(isOnChain || isReadOnly) && (
         <div className="flex items-center gap-2 text-yellow-600 font-semibold text-xs">
           <CheckCircle className="w-5 h-5" />
           <span>On-Chain Verified</span>

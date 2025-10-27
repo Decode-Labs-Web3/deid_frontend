@@ -77,7 +77,7 @@ export async function backendFetch(
  * @param options - Fetch options
  * @returns Promise with parsed JSON data
  */
-export async function backendFetchJSON<T = any>(
+export async function backendFetchJSON<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -98,9 +98,9 @@ export async function backendFetchJSON<T = any>(
 /**
  * POST request helper
  */
-export async function backendPost<T = any>(
+export async function backendPost<T = unknown>(
   endpoint: string,
-  body?: any
+  body?: unknown
 ): Promise<T> {
   return backendFetchJSON<T>(endpoint, {
     method: "POST",
@@ -111,7 +111,7 @@ export async function backendPost<T = any>(
 /**
  * GET request helper
  */
-export async function backendGet<T = any>(endpoint: string): Promise<T> {
+export async function backendGet<T = unknown>(endpoint: string): Promise<T> {
   return backendFetchJSON<T>(endpoint, {
     method: "GET",
   });
@@ -120,9 +120,9 @@ export async function backendGet<T = any>(endpoint: string): Promise<T> {
 /**
  * PUT request helper
  */
-export async function backendPut<T = any>(
+export async function backendPut<T = unknown>(
   endpoint: string,
-  body?: any
+  body?: unknown
 ): Promise<T> {
   return backendFetchJSON<T>(endpoint, {
     method: "PUT",
@@ -133,8 +133,50 @@ export async function backendPut<T = any>(
 /**
  * DELETE request helper
  */
-export async function backendDelete<T = any>(endpoint: string): Promise<T> {
+export async function backendDelete<T = unknown>(endpoint: string): Promise<T> {
   return backendFetchJSON<T>(endpoint, {
     method: "DELETE",
   });
+}
+
+// Search result interfaces
+export interface SearchResult {
+  _id: string;
+  username: string;
+  display_name?: string;
+  bio?: string;
+  avatar_ipfs_hash?: string;
+  role?: string;
+  last_login?: string;
+  is_active?: boolean;
+  last_account_deactivation?: string;
+  __v?: number;
+}
+
+export interface SearchResponse {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  data: SearchResult[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    is_last_page: boolean;
+  };
+  requestId: string;
+}
+
+/**
+ * Search users by username or email
+ */
+export async function searchUsers(
+  query: string,
+  page: number = 0,
+  limit: number = 20
+): Promise<SearchResponse> {
+  const endpoint = `/api/v1/decode/user-search?email_or_username=${encodeURIComponent(
+    query
+  )}&page=${page}&limit=${limit}`;
+  return backendGet<SearchResponse>(endpoint);
 }

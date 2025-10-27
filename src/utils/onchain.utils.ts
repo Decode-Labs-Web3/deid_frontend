@@ -240,3 +240,212 @@ export const checkOnChainProfile = async (
 // Contract Address: 0xfC336f4521eC2d95827d5c630A04587BFf4a160d
 // RPC URL: https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161 (Ethereum Sepolia)
 // Network: Ethereum Sepolia
+
+/**
+ * Resolves a wallet address to a username and checks if profile exists
+ * Lighter version of checkOnChainProfile for search results
+ */
+export const resolveAddressToProfile = async (
+  walletAddress: string
+): Promise<{
+  username: string;
+  hasProfile: boolean;
+  profileData: OnChainProfileData | null;
+}> => {
+  try {
+    console.log("🔍 Resolving address to profile:", walletAddress);
+
+    // Check if we're in a browser environment
+    if (typeof window === "undefined") {
+      console.log("❌ Not in browser environment, skipping on-chain check");
+      return { username: "", hasProfile: false, profileData: null };
+    }
+
+    // Connect to the network
+    const rpcUrl =
+      process.env.NEXT_PUBLIC_TESTNET_RPC_URL ||
+      "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    // Try both ABIs to see which one works with the proxy
+    let contract;
+
+    try {
+      // First try with DEiDProfile ABI
+      const DEiDProfileFactory = new ethers.ContractFactory(
+        DEID_PROFILE_ABI.abi,
+        DEID_PROFILE_ABI.bytecode,
+        provider
+      );
+      contract = DEiDProfileFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
+
+      // Test if this ABI works
+      await contract.resolveAddress(walletAddress);
+      console.log("✅ DEiDProfile ABI works with proxy");
+    } catch {
+      console.log("⚠️ DEiDProfile ABI failed, trying DEiDProxy ABI...");
+
+      // Try with DEiDProxy ABI
+      const DEiDProxyFactory = new ethers.ContractFactory(
+        DEID_PROXY_ABI.abi,
+        DEID_PROXY_ABI.bytecode,
+        provider
+      );
+      contract = DEiDProxyFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
+      console.log("✅ Using DEiDProxy ABI");
+    }
+
+    // Resolve address to username
+    const username = await contract.resolveAddress(walletAddress);
+    console.log("📝 Resolved username:", username);
+
+    if (!username || username === "") {
+      console.log("❌ No username found for address:", walletAddress);
+      return { username: "", hasProfile: false, profileData: null };
+    }
+
+    // Get basic profile data
+    const profile = await contract.getProfile(walletAddress);
+    console.log("📊 Profile data:", profile);
+
+    if (profile.username === "") {
+      console.log("❌ No profile found for address:", walletAddress);
+      return { username: "", hasProfile: false, profileData: null };
+    }
+
+    // Fetch profile metadata from IPFS
+    let profile_metadata: ProfileMetadata | null = null;
+    if (profile.metadataURI && profile.metadataURI !== "") {
+      try {
+        profile_metadata = await fetchProfileMetadataFromIPFS(
+          profile.metadataURI,
+          {
+            timeout: 5000,
+            retries: 2,
+          }
+        );
+      } catch (error) {
+        console.warn("⚠️ Failed to fetch profile metadata from IPFS:", error);
+      }
+    }
+
+    // Get social accounts
+    let platforms = [];
+    let accountIds = [];
+    try {
+      [platforms, accountIds] = await contract.getSocialAccounts(walletAddress);
+    } catch (error) {
+      console.log(
+        "⚠️ getSocialAccounts method not available or failed:",
+        error
+      );
+    }
+
+    const socialAccounts: SocialAccount[] = platforms.map(
+      (platform: string, index: number) => ({
+        platform,
+        accountId: accountIds[index],
+      })
+    );
+
+    const profileData: OnChainProfileData = {
+      profile: {
+        username: profile.username,
+        metadataURI: profile.metadataURI,
+        wallets: profile.wallets,
+        socialAccounts: profile.socialAccounts,
+        createdAt: Number(profile.createdAt),
+        lastUpdated: Number(profile.lastUpdated),
+        isActive: profile.isActive,
+      },
+      socialAccounts,
+      isValidator: false, // Not needed for search results
+      validators: [], // Not needed for search results
+      resolvedUsername: username,
+      profile_metadata,
+    };
+
+    console.log("✅ Address resolved successfully:", {
+      username,
+      hasProfile: true,
+    });
+    return { username, hasProfile: true, profileData };
+  } catch (error) {
+    console.error("❌ Error resolving address to profile:", error);
+    return { username: "", hasProfile: false, profileData: null };
+  }
+};
+
+/**
+ * Resolves a username to a wallet address
+ */
+export const resolveUsernameToAddress = async (
+  username: string
+): Promise<string | null> => {
+  try {
+    console.log("🔍 Resolving username to address:", username);
+
+    // Check if we're in a browser environment
+    if (typeof window === "undefined") {
+      console.log("❌ Not in browser environment, skipping on-chain check");
+      return null;
+    }
+
+    // Connect to the network
+    const rpcUrl =
+      process.env.NEXT_PUBLIC_TESTNET_RPC_URL ||
+      "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    // Try both ABIs to see which one works with the proxy
+    let contract;
+
+    try {
+      // First try with DEiDProfile ABI
+      const DEiDProfileFactory = new ethers.ContractFactory(
+        DEID_PROFILE_ABI.abi,
+        DEID_PROFILE_ABI.bytecode,
+        provider
+      );
+      contract = DEiDProfileFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
+
+      // Test if this ABI works
+      await contract.resolveUsername(username);
+      console.log("✅ DEiDProfile ABI works with proxy");
+    } catch {
+      console.log("⚠️ DEiDProfile ABI failed, trying DEiDProxy ABI...");
+
+      // Try with DEiDProxy ABI
+      const DEiDProxyFactory = new ethers.ContractFactory(
+        DEID_PROXY_ABI.abi,
+        DEID_PROXY_ABI.bytecode,
+        provider
+      );
+      contract = DEiDProxyFactory.attach(
+        PROXY_ADDRESS as string
+      ) as ethers.Contract;
+      console.log("✅ Using DEiDProxy ABI");
+    }
+
+    // Resolve username to address
+    const address = await contract.resolveUsername(username);
+    console.log("📝 Resolved address:", address);
+
+    if (!address || address === "0x0000000000000000000000000000000000000000") {
+      console.log("❌ No address found for username:", username);
+      return null;
+    }
+
+    console.log("✅ Username resolved successfully:", address);
+    return address;
+  } catch (error) {
+    console.error("❌ Error resolving username to address:", error);
+    return null;
+  }
+};
