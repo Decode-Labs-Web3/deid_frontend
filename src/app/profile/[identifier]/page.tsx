@@ -3,35 +3,32 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { SocialAccountItem } from "@/components/cards/SocialAccountItem";
 import {
   VerifyBadgeCard,
   EmptyBadgeState,
 } from "@/components/cards/VerifyBadgeCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Fingerprint,
-  Loader2,
-  AlertCircle,
-  ArrowLeft,
-  User,
-  Calendar,
-  ExternalLink,
-} from "lucide-react";
+import { StatCard } from "@/components/cards/StatCard";
+import { Loader2, AlertCircle, ArrowLeft, User, Calendar } from "lucide-react";
 import Image from "next/image";
 import {
   OnChainProfileData,
   checkOnChainProfile,
   resolveUsernameToAddress,
 } from "@/utils/onchain.utils";
+import { ethers } from "ethers";
+import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
 import {
   fetchAllUserBadges,
   getIPFSGateways,
   type UserBadge,
 } from "@/utils/badge.utils";
-import { toastSuccess } from "@/utils/toast.utils";
+
+// Contract configuration - using environment variable or fallback
+const PROXY_ADDRESS =
+  process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
+  "0xfC336f4521eC2d95827d5c630A04587BFf4a160d";
 
 const UserProfile = () => {
   const params = useParams();
@@ -56,40 +53,45 @@ const UserProfile = () => {
   const isWalletAddress = (id: string) => /^0x[a-fA-F0-9]{40}$/.test(id);
 
   // Fetch on-chain social accounts
-  const fetchOnChainAccounts = useCallback(
-    async (walletAddress: string) => {
-      try {
-        console.log("  🔗 Starting social accounts fetch...");
-        console.log("    Wallet:", walletAddress);
-        console.log("    Profile data available:", !!profileData);
-        console.log(
-          "    Social accounts in profile:",
-          profileData?.socialAccounts?.length || 0
-        );
+  const fetchOnChainAccounts = useCallback(async (walletAddress: string) => {
+    try {
+      console.log("🔗 Fetching on-chain social accounts for:", walletAddress);
 
-        // This would need to be implemented similar to the identity page
-        // For now, we'll use the social accounts from the profile data
-        if (profileData?.socialAccounts) {
-          const accounts = profileData.socialAccounts.map((account) => ({
-            platform: account.platform.toLowerCase(),
-            accountId: account.accountId,
-          }));
-          console.log(`  ✅ Mapped ${accounts.length} social account(s):`);
-          accounts.forEach((acc, i) => {
-            console.log(`    ${i + 1}. ${acc.platform}: ${acc.accountId}`);
-          });
-          setOnChainAccounts(accounts);
-        } else {
-          console.log("  ℹ️ No social accounts found in profile data");
-          setOnChainAccounts([]);
-        }
-      } catch (error) {
-        console.error("  ❌ Error fetching on-chain accounts:", error);
-        setOnChainAccounts([]);
-      }
-    },
-    [profileData]
-  );
+      // Create read-only provider
+      const provider = new ethers.JsonRpcProvider(
+        process.env.NEXT_PUBLIC_TESTNET_RPC_URL
+      );
+
+      // Use proxy address with DEiDProfile ABI (Diamond pattern)
+      const contract = new ethers.Contract(
+        PROXY_ADDRESS as string,
+        DEID_PROFILE_ABI.abi,
+        provider
+      );
+
+      // Call getSocialAccounts - returns (string[] platforms, string[] accountIds)
+      const [platforms, accountIds] = await contract.getSocialAccounts(
+        walletAddress
+      );
+
+      console.log("✅ On-chain accounts:", { platforms, accountIds });
+
+      // Map the results
+      const onChainAccountsList = platforms.map(
+        (platform: string, index: number) => ({
+          platform: platform.toLowerCase(),
+          accountId: accountIds[index],
+        })
+      );
+
+      setOnChainAccounts(onChainAccountsList);
+      return onChainAccountsList;
+    } catch (error) {
+      console.error("❌ Error fetching on-chain accounts:", error);
+      setOnChainAccounts([]);
+      return [];
+    }
+  }, []);
 
   // Fetch profile data
   useEffect(() => {
@@ -253,13 +255,6 @@ const UserProfile = () => {
     }
   };
 
-  // Get wallet addresses from profile data
-  const walletAddresses =
-    profileData?.profile_metadata?.wallets?.map((wallet) => wallet.address) ||
-    [];
-  const primaryWalletAddress =
-    profileData?.profile_metadata?.primary_wallet?.address;
-
   // Helper to check if the avatarUrl is an external URL (e.g., IPFS)
   const isExternalUrl = (url: string) => /^https?:\/\//.test(url);
 
@@ -345,7 +340,6 @@ const UserProfile = () => {
   console.log("✅ Rendering profile page with data:", {
     username: profileData.profile?.username,
     displayName: profileData.profile_metadata?.display_name,
-    walletCount: walletAddresses.length,
     badgeCount: userBadges.length,
     socialAccountCount: onChainAccounts.length,
   });
@@ -360,7 +354,7 @@ const UserProfile = () => {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Profile Information */}
+          {/* Left Column - DEiD Profile + Point Dashboard */}
           <div className="space-y-8">
             <h2 className="text-2xl font-bold border-b border-border pb-4">
               DEiD Profile
@@ -433,63 +427,21 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Wallet Addresses */}
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold">Wallet Addresses</h4>
-              {walletAddresses.length > 0 ? (
-                walletAddresses.map((address, i) => {
-                  const isPrimary = address === primaryWalletAddress;
-                  return (
-                    <div
-                      key={i}
-                      className={`bg-card border rounded-lg px-4 py-3 flex items-center gap-3 hover:border-primary transition-colors ${
-                        isPrimary
-                          ? "border-yellow-500 bg-yellow-50/10"
-                          : "border-border"
-                      }`}
-                    >
-                      <Fingerprint
-                        className={`w-5 h-5 ${
-                          isPrimary ? "text-yellow-500" : "text-primary"
-                        }`}
-                      />
-                      <span className="font-mono text-sm flex-1 truncate">
-                        <span className="hidden sm:inline">{address}</span>
-                        <span className="sm:hidden">
-                          {address.slice(0, 5)}...{address.slice(-4)}
-                        </span>
-                      </span>
-                      {isPrimary && (
-                        <Badge variant="secondary" className="text-xs">
-                          PRIMARY
-                        </Badge>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(address);
-                          toastSuccess("Address copied to clipboard");
-                        }}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3">
-                  <Fingerprint className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    No wallet addresses found
-                  </span>
-                </div>
-              )}
+            {/* Point Dashboard */}
+            <div className="bg-card border border-border rounded-xl p-6 grid grid-cols-3 gap-6">
+              <StatCard title="Task Score" value={45} total={213} />
+              <StatCard title="Social Score" value={28} total={112} />
+              <StatCard title="Chain Score" value={67} total={240} />
             </div>
+          </div>
 
+          {/* Right Column - DEiD Badges + Social Accounts Summary */}
+          <div className="space-y-8">
             {/* DEiD Badges */}
             <div>
-              <h4 className="text-lg font-semibold mb-4">DEiD Badges</h4>
+              <h2 className="text-2xl font-bold border-b border-border pb-4 mb-6">
+                DEiD Badges
+              </h2>
 
               {badgesLoading && (
                 <div className="flex items-center justify-center py-8">
@@ -529,42 +481,98 @@ const UserProfile = () => {
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Social Accounts */}
-          <div className="space-y-8">
-            <h2 className="text-2xl font-bold border-b border-border pb-4">
-              Social Accounts
-            </h2>
+            {/* Social Accounts Summary */}
+            <div>
+              <h2 className="text-2xl font-bold border-b border-border pb-4 mb-6">
+                Social Accounts
+              </h2>
 
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {onChainAccounts.length > 0 ? (
-                onChainAccounts.map((account, index) => (
-                  <SocialAccountItem
-                    key={`${account.platform}-${account.accountId}-${index}`}
-                    platform={account.platform}
-                    username={account.accountId}
-                    account_id={account.accountId}
-                    created_at={new Date().toISOString()}
-                    onValidate={() => {}} // No validation for view-only mode
-                    isValidating={false}
-                    isOnChain={true}
-                    isReadOnly={true} // Add this prop to make it read-only
-                  />
-                ))
-              ) : (
-                <div className="bg-card border border-border rounded-lg p-8 flex flex-col items-center justify-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <User className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground mb-2">
-                    No social accounts linked
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    This user hasn&apos;t linked any social accounts yet
+              <div className="w-full bg-card border border-border rounded-xl p-4">
+                <div className="text-center mb-4">
+                  <p className="text-md text-muted-foreground">
+                    <span className="font-semibold">Connected Platforms</span>
                   </p>
                 </div>
-              )}
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-3 max-w-2xl mx-auto">
+                  {(() => {
+                    // Count accounts by platform
+                    const platformCounts = onChainAccounts.reduce(
+                      (acc, account) => {
+                        const platform = account.platform.toLowerCase();
+                        acc[platform] = (acc[platform] || 0) + 1;
+                        return acc;
+                      },
+                      {} as Record<string, number>
+                    );
+
+                    const platforms = [
+                      {
+                        key: "discord",
+                        icon: "/discord-icon.png",
+                        alt: "Discord",
+                      },
+                      { key: "twitter", icon: "/x-icon.png", alt: "Twitter" },
+                      {
+                        key: "github",
+                        icon: "/github-icon.png",
+                        alt: "GitHub",
+                      },
+                      {
+                        key: "google",
+                        icon: "/google_logo.png",
+                        alt: "Google",
+                      },
+                      {
+                        key: "facebook",
+                        icon: "/facebook-icon.png",
+                        alt: "Facebook",
+                      },
+                    ];
+
+                    return platforms.map((platform) => {
+                      const count = platformCounts[platform.key] || 0;
+                      return (
+                        <div
+                          key={platform.key}
+                          className="border border-border rounded-lg group flex flex-col items-center justify-center gap-1 p-3 hover:bg-muted/50 transition-all duration-200 w-full relative"
+                        >
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
+                            <Image
+                              src={platform.icon}
+                              alt={platform.alt}
+                              width={24}
+                              height={24}
+                              className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
+                            />
+                            {count > 0 && (
+                              <div className="absolute p-2 -top-1 -right-1 w-5 h-5  text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                x{count}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground text-center">
+                            {platform.alt}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+                {onChainAccounts.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4 mx-auto">
+                      <User className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground mb-2">
+                      No social accounts linked
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      This user hasn&apos;t linked any social accounts yet
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

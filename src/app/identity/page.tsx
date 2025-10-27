@@ -1165,7 +1165,7 @@ const Identity = () => {
                   </span>
                 </p>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3 max-w-2xl mx-auto">
+              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-3 max-w-2xl mx-auto">
                 <button
                   onClick={() => handleSocialConnect("discord")}
                   className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#5865F2]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
@@ -1312,37 +1312,6 @@ const Identity = () => {
                         <Image
                           src="/facebook-icon.png"
                           alt="Facebook"
-                          width={24}
-                          height={24}
-                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
-                        />
-                      )}
-                    </span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleSocialConnect("telegram")}
-                  className="group flex flex-col items-center justify-center gap-2 p-3 rounded-xl hover:bg-[#0088cc]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
-                  disabled={connectingPlatform !== null}
-                  title="Connect Telegram"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-12 md:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center transition-transform duration-200 group-hover:scale-105 relative">
-                    <span
-                      className="absolute inset-0 z-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #F43F5E 0%, #F472B6 50%, #fff 100%)",
-                        filter: "blur(12px)",
-                      }}
-                    />
-                    <span className="relative z-10">
-                      {connectingPlatform === "telegram" ? (
-                        <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6 text-white animate-spin" />
-                      ) : (
-                        <Image
-                          src="/telegram-logo.png"
-                          alt="Telegram"
                           width={24}
                           height={24}
                           className="w-6 h-6 sm:w-7 sm:h-7 md:w-6 md:h-6"
