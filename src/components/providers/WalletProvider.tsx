@@ -8,6 +8,7 @@ import { http } from "viem";
 import { defineChain } from "viem";
 import { useEffect } from "react";
 import { useAccount, useSwitchChain } from "wagmi";
+import { createStorage } from "wagmi";
 
 // Define custom Sepolia chain using existing env variables
 const customSepolia = defineChain({
@@ -47,6 +48,18 @@ let queryClient: QueryClient | null = null;
 
 function getConfig() {
   if (!config) {
+    // Create safe storage that works with SSR
+    const storage = createStorage({
+      storage:
+        typeof window !== "undefined" && window.localStorage
+          ? window.localStorage
+          : {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            },
+    });
+
     config = getDefaultConfig({
       appName: "DEiD Frontend",
       projectId:
@@ -63,7 +76,7 @@ function getConfig() {
         [arbitrum.id]: http(),
         [base.id]: http(),
       },
-      // Set custom Sepolia as the default chain
+      storage,
       ssr: true,
     });
   }

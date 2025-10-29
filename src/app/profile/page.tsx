@@ -11,6 +11,10 @@ import { checkOnChainProfile, OnChainProfileData } from "@/utils/onchain.utils";
 import { getPrimaryWalletAddress } from "@/utils/session.utils";
 import { useRouter } from "next/navigation";
 import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
+import { ScoreCard } from "@/components/score/ScoreCard";
+import { RefreshScoreButton } from "@/components/score/RefreshScoreButton";
+import { Leaderboard } from "@/components/score/Leaderboard";
+import { useScore } from "@/hooks/useScore";
 
 interface PrimaryWallet {
   _id: string;
@@ -76,6 +80,15 @@ const Profile = () => {
   const [nftLoading, setNftLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Fetch score data for the primary wallet
+  const primaryWalletAddress = profileData?.primary_wallet?.address;
+  const {
+    score,
+    loading: scoreLoading,
+    refresh: refreshScore,
+  } = useScore(primaryWalletAddress);
+
   // Note: We no longer depend on wallet connection for initial data fetch
   // Data is fetched from backend first, then on-chain data using primary wallet
 
@@ -237,6 +250,12 @@ const Profile = () => {
     <AppLayout>
       <div className="max-w-7xl mx-auto p-8 space-y-8">
         <StreakTracker />
+
+        {/* Score Update Button */}
+        <div className="flex justify-end">
+          <RefreshScoreButton onSuccess={refreshScore} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <ProfileCard
@@ -254,27 +273,36 @@ const Profile = () => {
               }
               primary_wallet_address={profileData?.primary_wallet?.address}
             />
-            <div className="bg-card border border-border rounded-xl p-6 grid grid-cols-3 gap-6">
-              <StatCard
-                title="Task Score"
-                value={profileData?.taskScore || 0}
-                total={213}
-              />
-              <StatCard
-                title="Social Score"
-                value={profileData?.socialScore || 0}
-                total={112}
-              />
-              <StatCard
-                title="Chain Score"
-                value={profileData?.chainScore || 0}
-                total={240}
-              />
-            </div>
+
+            {/* Real Score Card */}
+            {score && !scoreLoading ? (
+              <ScoreCard scoreData={score} showDetails={true} />
+            ) : (
+              <div className="bg-card border border-border rounded-xl p-6 grid grid-cols-3 gap-6">
+                <StatCard
+                  title="Badge Score"
+                  value={score?.breakdown?.badgeScore || 0}
+                  total={500}
+                />
+                <StatCard
+                  title="Social Score"
+                  value={score?.breakdown?.socialScore || 0}
+                  total={100}
+                />
+                <StatCard
+                  title="Chain Score"
+                  value={score?.breakdown?.chainScore || 0}
+                  total={1000}
+                />
+              </div>
+            )}
           </div>
 
           <TrustWheel />
         </div>
+
+        {/* Leaderboard Preview */}
+        <Leaderboard limit={10} currentUserAddress={primaryWalletAddress} />
 
         <div>
           <div className="flex items-center justify-between mb-6">
