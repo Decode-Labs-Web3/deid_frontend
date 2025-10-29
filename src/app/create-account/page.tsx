@@ -25,7 +25,7 @@ import {
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
   process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-  "0xfC336f4521eC2d95827d5c630A04587BFf4a160d";
+  "0xfcd6b7875C34c02846F55408038CbC35bC5A0BEF";
 
 // Import the actual ABI from the contract JSON files
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";

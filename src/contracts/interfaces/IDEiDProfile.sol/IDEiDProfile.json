@@ -121,6 +121,29 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getAllProfiles",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "addresses",
+          "type": "address[]"
+        },
+        {
+          "internalType": "string[]",
+          "name": "usernames",
+          "type": "string[]"
+        },
+        {
+          "internalType": "string[]",
+          "name": "metadataURIs",
+          "type": "string[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",

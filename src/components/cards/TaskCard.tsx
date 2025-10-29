@@ -71,7 +71,7 @@ export const TaskCard = ({
   // Get the Proxy contract address (BadgeSystem is accessed through proxy)
   const PROXY_ADDRESS =
     process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
-    "0xfC336f4521eC2d95827d5c630A04587BFf4a160d";
+    "0xfcd6b7875C34c02846F55408038CbC35bC5A0BEF";
 
   const getValidationTypeLabel = (type: string) => {
     const types: Record<string, string> = {
