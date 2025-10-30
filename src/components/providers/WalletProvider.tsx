@@ -47,6 +47,18 @@ let queryClient: QueryClient | null = null;
 
 function getConfig() {
   if (!config) {
+    // Create safe storage that works with SSR
+    const storage = createStorage({
+      storage:
+        typeof window !== "undefined" && window.localStorage
+          ? window.localStorage
+          : {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            },
+    });
+
     config = getDefaultConfig({
       appName: "DEiD Frontend",
       projectId:
