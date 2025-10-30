@@ -1,6 +1,7 @@
 // import { Globe, Github, Linkedin } from "lucide-react";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { convertIPFSUrlToHttp } from "@/utils/ipfs.utils";
 
 interface ProfileCardProps {
   username?: string;
@@ -8,6 +9,7 @@ interface ProfileCardProps {
   bio?: string;
   avatar_ipfs_hash?: string;
   primary_wallet_address?: string;
+  socialAccounts?: { platform: string; accountId: string }[];
 }
 
 export const ProfileCard = ({
@@ -16,6 +18,7 @@ export const ProfileCard = ({
   bio,
   avatar_ipfs_hash,
   primary_wallet_address,
+  socialAccounts = [],
 }: ProfileCardProps) => {
   const [avatarUrl, setAvatarUrl] = useState<string>("/deid_logo.png");
   const [loading, setLoading] = useState(false);
@@ -77,11 +80,27 @@ export const ProfileCard = ({
   // Helper to check if the avatarUrl is an external URL (e.g., IPFS)
   const isExternalUrl = (url: string) => /^https?:\/\//.test(url);
 
-  // Helper to format wallet address (first 6 and last 6 characters)
-  const formatWalletAddress = (address: string) => {
-    if (!address || address.length < 12) return address;
-    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+  // Social platforms
+  const platformIcon: Record<string, string> = {
+    discord: "/discord-icon.png",
+    twitter: "/x-icon.png",
+    github: "/github-icon.png",
+    google: "/google_logo.png",
+    facebook: "/facebook-icon.png",
+    x: "/x-icon.png",
   };
+
+  const uniquePlatforms = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of socialAccounts) {
+      const key = (s.platform || "").toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+    }
+    return Object.entries(counts).map(([platform, count]) => ({
+      platform,
+      count,
+    }));
+  }, [socialAccounts]);
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 flex items-start gap-6">
@@ -146,6 +165,33 @@ export const ProfileCard = ({
                 {primary_wallet_address.slice(-4)}
               </span>
             </span>
+          </div>
+        )}
+
+        {uniquePlatforms.length > 0 && (
+          <div className="mt-4">
+            <div className="text-xs text-muted-foreground mb-2">
+              Social Accounts
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {uniquePlatforms.map(({ platform, count }) => (
+                <div key={platform} className="relative">
+                  <div className="w-8 h-8 rounded-lg border border-border grid place-items-center bg-background">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={platformIcon[platform] || "/globe.svg"}
+                      alt={platform}
+                      className="w-4 h-4"
+                    />
+                  </div>
+                  {count > 1 && (
+                    <span className="absolute -top-1 -right-1 text-[10px] px-1 rounded-full bg-primary text-primary-foreground">
+                      x{count}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

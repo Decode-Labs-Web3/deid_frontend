@@ -1,14 +1,13 @@
 "use client";
 
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, createStorage, noopStorage } from "wagmi";
 import { mainnet, polygon, optimism, arbitrum, base } from "wagmi/chains";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { http } from "viem";
 import { defineChain } from "viem";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAccount, useSwitchChain } from "wagmi";
-import { createStorage } from "wagmi";
 
 // Define custom Sepolia chain using existing env variables
 const customSepolia = defineChain({
@@ -76,7 +75,11 @@ function getConfig() {
         [arbitrum.id]: http(),
         [base.id]: http(),
       },
-      storage,
+      // Use noopStorage on server, localStorage on client
+      storage: createStorage({
+        storage:
+          typeof window !== "undefined" ? window.localStorage : noopStorage,
+      }),
       ssr: true,
     });
   }
@@ -109,6 +112,26 @@ function AutoSwitchToSepolia() {
   return null;
 }
 
+// Client-side only wrapper for RainbowKit to prevent SSR issues
+function ClientOnlyRainbowKit({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
+  return (
+    <RainbowKitProvider>
+      <AutoSwitchToSepolia />
+      {children}
+    </RainbowKitProvider>
+  );
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const wagmiConfig = getConfig();
   const queryClientInstance = getQueryClient();
@@ -116,10 +139,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClientInstance}>
-        <RainbowKitProvider>
-          <AutoSwitchToSepolia />
-          {children}
-        </RainbowKitProvider>
+        <ClientOnlyRainbowKit>{children}</ClientOnlyRainbowKit>
       </QueryClientProvider>
     </WagmiProvider>
   );

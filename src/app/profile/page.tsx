@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StreakTracker } from "@/components/layout/StreakTracker";
 import { ProfileCard } from "@/components/cards/ProfileCard";
-import { StatCard } from "@/components/cards/StatCard";
 import { TrustWheel } from "@/components/charts/TrustWheel";
 import { NFTCard } from "@/components/cards/NFTCard";
 import { checkOnChainProfile, OnChainProfileData } from "@/utils/onchain.utils";
@@ -12,8 +11,8 @@ import { getPrimaryWalletAddress } from "@/utils/session.utils";
 import { useRouter } from "next/navigation";
 import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
 import { ScoreCard } from "@/components/score/ScoreCard";
-import { RefreshScoreButton } from "@/components/score/RefreshScoreButton";
 import { Leaderboard } from "@/components/score/Leaderboard";
+import { RefreshScoreButton } from "@/components/score/RefreshScoreButton";
 import { useScore } from "@/hooks/useScore";
 
 interface PrimaryWallet {
@@ -248,16 +247,19 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      <div className="max-w-7xl mx-auto p-8">
+        {/* Optionally keep StreakTracker above main grid */}
         <StreakTracker />
 
-        {/* Score Update Button */}
-        <div className="flex justify-end">
+        {/* Update Score Button */}
+        <div className="flex justify-end mb-4">
           <RefreshScoreButton onSuccess={refreshScore} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-8">
+        {/* Main two-column grid: left stacks ProfileCard + Leaderboard, right stacks TrustWheel + ScoreCard */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Left column: ProfileCard then Leaderboard */}
+          <div className="flex flex-col gap-8">
             <ProfileCard
               username={
                 onChainData?.profile_metadata?.username ?? profileData?.username
@@ -271,40 +273,22 @@ const Profile = () => {
                 onChainData?.profile_metadata?.avatar_ipfs_hash ??
                 profileData?.avatar_ipfs_hash
               }
-              primary_wallet_address={profileData?.primary_wallet?.address}
+              primary_wallet_address={primaryWalletAddress}
             />
-
-            {/* Real Score Card */}
-            {score && !scoreLoading ? (
-              <ScoreCard scoreData={score} showDetails={true} />
-            ) : (
-              <div className="bg-card border border-border rounded-xl p-6 grid grid-cols-3 gap-6">
-                <StatCard
-                  title="Badge Score"
-                  value={score?.breakdown?.badgeScore || 0}
-                  total={500}
-                />
-                <StatCard
-                  title="Social Score"
-                  value={score?.breakdown?.socialScore || 0}
-                  total={100}
-                />
-                <StatCard
-                  title="Chain Score"
-                  value={score?.breakdown?.chainScore || 0}
-                  total={1000}
-                />
-              </div>
-            )}
+            <Leaderboard limit={10} currentUserAddress={primaryWalletAddress} />
           </div>
 
-          <TrustWheel />
+          {/* Right column: TrustWheel then ScoreCard */}
+          <div className="flex flex-col gap-8">
+            <TrustWheel address={primaryWalletAddress} />
+            {score && !scoreLoading && (
+              <ScoreCard scoreData={score} showDetails={true} />
+            )}
+          </div>
         </div>
 
-        {/* Leaderboard Preview */}
-        <Leaderboard limit={10} currentUserAddress={primaryWalletAddress} />
-
-        <div>
+        {/* NFT Collections - full width bottom section */}
+        <div className="mt-10">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">NFT Collections</h2>
             {nftData.length > 0 && (

@@ -14,10 +14,12 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return;
+
     const savedTheme = localStorage.getItem("deid-theme") as Theme;
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
       .matches
@@ -26,7 +28,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const initialTheme = savedTheme || systemTheme;
 
     setThemeState(initialTheme);
-    setMounted(true);
 
     // Apply theme to document
     document.documentElement.classList.remove("light", "dark");
@@ -35,9 +36,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem("deid-theme", newTheme);
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(newTheme);
+    // Only access localStorage on client side
+    if (typeof window !== "undefined") {
+      localStorage.setItem("deid-theme", newTheme);
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(newTheme);
+    }
   };
 
   const toggleTheme = () => {

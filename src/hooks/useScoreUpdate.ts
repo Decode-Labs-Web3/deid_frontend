@@ -92,7 +92,10 @@ export function useScoreUpdate(): UseScoreUpdateReturn {
       const data: RecomputeResponse = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to recompute scores");
+        throw new Error(
+          "Failed to recompute scores: " +
+            (data as unknown as { error: string }).error
+        );
       }
 
       console.log("  ✅ Scores calculated and snapshot uploaded to IPFS");
@@ -125,9 +128,9 @@ export function useScoreUpdate(): UseScoreUpdateReturn {
       await checkCooldown(); // Update cooldown status
 
       return { success: true, txHash: tx.hash };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("❌ Score update error:", err);
-      setError(err.message || "Failed to update score");
+      setError(err instanceof Error ? err.message : "Failed to update score");
       return { success: false };
     } finally {
       setLoading(false);

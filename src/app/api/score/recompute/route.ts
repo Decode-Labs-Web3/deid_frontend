@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
-import BADGE_SYSTEM_ABI from "@/contracts/verification/BadgeSystem.sol/BadgeSystem.json";
+// import BADGE_SYSTEM_ABI from "@/contracts/verification/BadgeSystem.sol/BadgeSystem.json";
 import { uploadAndPin } from "@/lib/ipfs/client";
 import { calculateMerkleRoot } from "@/lib/score/merkle";
 import { signSnapshotMessage } from "@/lib/score/signer";
@@ -17,7 +17,7 @@ import {
   UserScoreData,
   RecomputeResponse,
 } from "@/types/score.types";
-import { fetchProfileMetadataFromIPFS } from "@/utils/ipfs.utils";
+// import { fetchProfileMetadataFromIPFS } from "@/utils/ipfs.utils";
 
 const PROXY_ADDRESS =
   process.env.NEXT_PUBLIC_PROXY_ADDRESS ||
@@ -65,17 +65,25 @@ export async function POST(request: NextRequest) {
       provider
     );
 
-    const badgeContract = new ethers.Contract(
-      PROXY_ADDRESS,
-      BADGE_SYSTEM_ABI.abi,
-      provider
-    );
+    // const badgeContract = new ethers.Contract(
+    //   PROXY_ADDRESS,
+    //   BADGE_SYSTEM_ABI.abi,
+    //   provider
+    // );
 
     // Step 1: Fetch all user profiles
     console.log("📋 Fetching all user profiles...");
     const [addresses, usernames, metadataURIs] =
       await profileContract.getAllProfiles();
     console.log(`✅ Found ${addresses.length} users`);
+    console.log(
+      `   Preview users:`,
+      addresses.slice(0, 5).map((a: string, i: number) => ({
+        address: a,
+        username: usernames[i],
+        metadataURI: metadataURIs[i],
+      }))
+    );
 
     if (addresses.length === 0) {
       return NextResponse.json(
@@ -99,6 +107,7 @@ export async function POST(request: NextRequest) {
 
         // Fetch badges
         const badges = await fetchAllUserBadges(address);
+        console.log(`    🏆 Badges: ${badges.length}`);
 
         // Fetch social accounts
         let socialAccounts = [];
@@ -109,13 +118,15 @@ export async function POST(request: NextRequest) {
             platform,
             accountId: accountIds[idx],
           }));
-        } catch (e) {
+          console.log(`    🔗 Social accounts: ${socialAccounts.length}`);
+        } catch {
           console.warn(`  ⚠️ No social accounts for ${address}`);
         }
 
         // Fetch ETH balance
         const balanceWei = await provider.getBalance(address);
         const ethBalance = ethers.formatEther(balanceWei);
+        console.log(`    💰 ETH balance: ${ethBalance}`);
 
         // Get streak days (mock for now - should integrate with StreakTracker)
         const streakDays = 0; // TODO: Integrate with StreakTracker contract
@@ -135,10 +146,22 @@ export async function POST(request: NextRequest) {
             socialAccounts,
             streakDays,
             ethBalance,
-            chainActivity: activity,
+            // Placeholder; the calculator computes real activity internally
+            chainActivity: {
+              txCount: 0,
+              firstTx: null,
+              lastTx: null,
+              contractInteractions: 0,
+              gasSpent: "0",
+            },
             updateCount,
           },
           provider
+        );
+
+        console.log(`    📈 Breakdown:`, breakdown);
+        console.log(
+          `    🧭 Activity: tx=${activity.txCount}, contracts=${activity.contractInteractions}`
         );
 
         usersData.push({
@@ -159,11 +182,21 @@ export async function POST(request: NextRequest) {
         console.log(`  ✅ Score: ${total} (${address.slice(0, 8)}...)`);
       } catch (error) {
         console.error(`  ❌ Error processing user ${address}:`, error);
+        console.error(
+          `     Username: ${username} | MetadataURI: ${metadataURIs[i]}`
+        );
         // Continue with other users
       }
     }
 
     // Step 3: Sort by score and assign ranks
+    if (usersData.length === 0) {
+      console.warn("⚠️ No user scores computed. Aborting snapshot upload.");
+      return NextResponse.json(
+        { success: false, error: "No user scores computed (usersData empty)" },
+        { status: 500 }
+      );
+    }
     usersData.sort((a, b) => b.totalScore - a.totalScore);
     usersData.forEach((user, index) => {
       user.rank = index + 1;
@@ -196,8 +229,10 @@ export async function POST(request: NextRequest) {
       metadata: {
         totalUsers: usersData.length,
         averageScore:
-          usersData.reduce((sum, u) => sum + u.totalScore, 0) /
-          usersData.length,
+          usersData.length > 0
+            ? usersData.reduce((sum, u) => sum + u.totalScore, 0) /
+              usersData.length
+            : 0,
         topScore: usersData[0]?.totalScore || 0,
         totalBadges: usersData.reduce((sum, u) => sum + u.badges.length, 0),
       },
@@ -242,12 +277,12 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Score recomputation complete");
     return NextResponse.json(response);
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ Score recomputation error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to recompute scores",
+        error: (error as Error)?.message || "Failed to recompute scores",
       },
       { status: 500 }
     );

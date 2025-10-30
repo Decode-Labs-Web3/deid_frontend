@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,26 +24,6 @@ export function Leaderboard({
   currentUserAddress,
 }: LeaderboardProps) {
   const { snapshot, loading, error } = useSnapshot();
-  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
-
-  // Load avatar URLs
-  useEffect(() => {
-    if (snapshot) {
-      const topUsers = snapshot.users.slice(0, limit);
-      topUsers.forEach((user) => {
-        if (user.badges && user.badges.length > 0) {
-          // Use first badge image as avatar fallback
-          const firstBadge = user.badges[0];
-          if (firstBadge.metadata?.image) {
-            setAvatarUrls((prev) => ({
-              ...prev,
-              [user.address]: convertIPFSUrlToHttp(firstBadge.metadata.image),
-            }));
-          }
-        }
-      });
-    }
-  }, [snapshot, limit]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -108,7 +88,42 @@ export function Leaderboard({
     );
   }
 
-  const topUsers = snapshot.users.slice(0, limit);
+  // Curated list: Top 3 + (prev,current,next) around current user
+  const users = snapshot.users;
+  const byRank = [...users].sort((a, b) => a.rank - b.rank);
+  const top3 = byRank.slice(0, 3);
+
+  let windowUsers: typeof users = [];
+  if (currentUserAddress) {
+    const me = byRank.find(
+      (u) => u.address.toLowerCase() === currentUserAddress.toLowerCase()
+    );
+    if (me) {
+      const prev = byRank.find((u) => u.rank === me.rank - 1);
+      const next = byRank.find((u) => u.rank === me.rank + 1);
+      windowUsers = [prev, me, next].filter(Boolean) as typeof users;
+    }
+  }
+
+  // Merge unique, preserving order: top3, ellipsis, window
+  const seen = new Set<string>();
+  const curated: typeof users = [];
+  for (const u of top3) {
+    if (!seen.has(u.address)) {
+      seen.add(u.address);
+      curated.push(u);
+    }
+  }
+  const needsEllipsis =
+    windowUsers.length > 0 &&
+    !curated.some((u) => u.address === windowUsers[0].address) &&
+    windowUsers[0].rank > 4;
+  for (const u of windowUsers) {
+    if (!seen.has(u.address)) {
+      seen.add(u.address);
+      curated.push(u);
+    }
+  }
 
   return (
     <Card>
@@ -124,10 +139,31 @@ export function Leaderboard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {topUsers.map((user) => {
+        {curated.map((user) => {
           const isCurrentUser =
             currentUserAddress &&
             user.address.toLowerCase() === currentUserAddress.toLowerCase();
+
+          // Compute avatar: prefer profile_metadata.avatar_ipfs_hash, fallback to first badge image
+          const avatarSrc = (() => {
+            const meta = (
+              user as unknown as {
+                profile_metadata?: { avatar_ipfs_hash?: string };
+              }
+            ).profile_metadata;
+            if (meta?.avatar_ipfs_hash) {
+              const base =
+                process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
+                "http://35.247.142.76:8080/ipfs";
+              return `${base}/${meta.avatar_ipfs_hash}`;
+            }
+            const firstBadgeImg = user.badges?.[0]?.metadata?.image as
+              | string
+              | undefined;
+            return firstBadgeImg
+              ? convertIPFSUrlToHttp(firstBadgeImg)
+              : undefined;
+          })();
 
           return (
             <div
@@ -153,7 +189,7 @@ export function Leaderboard({
               {/* Avatar */}
               <Avatar className="h-10 w-10">
                 <AvatarImage
-                  src={avatarUrls[user.address]}
+                  src={avatarSrc}
                   alt={user.username || user.address}
                 />
                 <AvatarFallback>
@@ -188,6 +224,11 @@ export function Leaderboard({
             </div>
           );
         })}
+        {needsEllipsis && (
+          <div className="flex items-center justify-center text-xs text-muted-foreground py-1">
+            …
+          </div>
+        )}
       </CardContent>
     </Card>
   );
