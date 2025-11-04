@@ -24,6 +24,19 @@ export default function LeaderboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLimit, setSelectedLimit] = useState(25);
 
+  // Define a util for floor-ing score fields in the snapshot metadata
+  const getFlooredMetadata = (metadata: any) => {
+    if (!metadata) return {};
+    return {
+      ...metadata,
+      topScore: Math.floor(metadata.topScore),
+      averageScore: Math.floor(metadata.averageScore),
+      // add others as necessary for future expansion
+    };
+  };
+
+  const flooredMetadata = snapshot ? getFlooredMetadata(snapshot.metadata) : {};
+
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto p-8 space-y-8">
@@ -54,7 +67,7 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {snapshot.metadata.totalUsers}
+                  {flooredMetadata.totalUsers ?? snapshot.metadata.totalUsers}
                 </div>
               </CardContent>
             </Card>
@@ -67,7 +80,7 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {snapshot.metadata.topScore}
+                  {flooredMetadata.topScore}
                 </div>
               </CardContent>
             </Card>
@@ -80,7 +93,7 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {Math.round(snapshot.metadata.averageScore)}
+                  {flooredMetadata.averageScore}
                 </div>
               </CardContent>
             </Card>
@@ -93,7 +106,7 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {snapshot.metadata.totalBadges}
+                  {flooredMetadata.totalBadges ?? snapshot.metadata.totalBadges}
                 </div>
               </CardContent>
             </Card>
@@ -109,11 +122,11 @@ export default function LeaderboardPage() {
           </TabsList>
 
           <TabsContent value="top10" className="space-y-6">
-            <Leaderboard limit={10} currentUserAddress={address} />
+            <Leaderboard limit={10} currentUserAddress={address} floorScores />
           </TabsContent>
 
           <TabsContent value="top100" className="space-y-6">
-            <Leaderboard limit={100} currentUserAddress={address} />
+            <Leaderboard limit={100} currentUserAddress={address} floorScores />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">

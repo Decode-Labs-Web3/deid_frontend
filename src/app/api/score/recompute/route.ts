@@ -7,11 +7,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
 // import BADGE_SYSTEM_ABI from "@/contracts/verification/BadgeSystem.sol/BadgeSystem.json";
-import { uploadAndPin } from "@/lib/ipfs/client";
+import { uploadAndPin, fetchFromIPFS } from "@/lib/ipfs/client";
 import { calculateMerkleRoot } from "@/lib/score/merkle";
 import { signSnapshotMessage } from "@/lib/score/signer";
 import { calculateUserScore } from "@/lib/score/calculator";
 import { fetchAllUserBadges } from "@/utils/badge.utils";
+import { getLatestSnapshot } from "@/utils/score.contract";
 import {
   GlobalSnapshot,
   UserScoreData,
@@ -28,9 +29,6 @@ const RPC_URL =
   "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
 
 const VALIDATOR_PRIVATE_KEY = process.env.VALIDATOR_PRIVATE_KEY;
-
-// In-memory store for update counts (should be replaced with database)
-const updateCounts = new Map<string, number>();
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,6 +90,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Step 1.5: Fetch latest snapshot to get existing updateCounts
+    console.log("📥 Fetching latest snapshot to get existing updateCounts...");
+    const existingUpdateCounts = new Map<string, number>();
+    try {
+      const latestSnapshotMeta = await getLatestSnapshot();
+      if (latestSnapshotMeta.cid && latestSnapshotMeta.cid !== "") {
+        const latestSnapshotData: GlobalSnapshot = await fetchFromIPFS(
+          latestSnapshotMeta.cid
+        );
+        console.log(
+          `✅ Fetched latest snapshot with ${latestSnapshotData.users.length} users`
+        );
+        // Build map of existing updateCounts
+        for (const user of latestSnapshotData.users) {
+          existingUpdateCounts.set(
+            user.address.toLowerCase(),
+            user.updateCount || 0
+          );
+        }
+        console.log(
+          `   Loaded ${existingUpdateCounts.size} existing updateCounts from snapshot`
+        );
+      } else {
+        console.log("⚠️ No existing snapshot found, starting fresh");
+      }
+    } catch (error) {
+      console.warn(
+        "⚠️ Failed to fetch latest snapshot for updateCounts, starting fresh:",
+        error
+      );
+      // Continue with empty map - all users will start at 0
+    }
+
     // Step 2: Calculate scores for each user
     console.log("🧮 Calculating scores for all users...");
     const usersData: UserScoreData[] = [];
@@ -131,12 +162,21 @@ export async function POST(request: NextRequest) {
         // Get streak days (mock for now - should integrate with StreakTracker)
         const streakDays = 0; // TODO: Integrate with StreakTracker contract
 
-        // Get update count
-        const currentCount = updateCounts.get(address.toLowerCase()) || 0;
+        // Get update count from latest snapshot, +1 for trigger user
+        const existingCount =
+          existingUpdateCounts.get(address.toLowerCase()) || 0;
         const updateCount =
           address.toLowerCase() === triggerAddress.toLowerCase()
-            ? currentCount + 1
-            : currentCount;
+            ? existingCount + 1
+            : existingCount;
+
+        console.log(
+          `    📊 UpdateCount: ${existingCount} → ${updateCount} ${
+            address.toLowerCase() === triggerAddress.toLowerCase()
+              ? "(trigger user +1)"
+              : "(unchanged)"
+          }`
+        );
 
         // Calculate score
         const { breakdown, total, activity } = await calculateUserScore(
@@ -211,13 +251,7 @@ export async function POST(request: NextRequest) {
       );
     });
 
-    // Step 4: Update count for trigger address
-    updateCounts.set(
-      triggerAddress.toLowerCase(),
-      (updateCounts.get(triggerAddress.toLowerCase()) || 0) + 1
-    );
-
-    // Step 5: Generate global snapshot
+    // Step 3: Generate global snapshot
     const timestamp = Math.floor(Date.now() / 1000);
     const snapshotId = timestamp; // Use timestamp as snapshot ID
 
@@ -238,17 +272,17 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Step 6: Calculate Merkle root
+    // Step 4: Calculate Merkle root
     console.log("🌳 Calculating Merkle root...");
     const merkleRoot = calculateMerkleRoot(usersData);
     snapshot.merkleRoot = merkleRoot;
 
-    // Step 7: Upload to IPFS
+    // Step 5: Upload to IPFS
     console.log("📤 Uploading snapshot to IPFS...");
     const cid = await uploadAndPin(snapshot);
     console.log(`✅ Uploaded to IPFS: ${cid}`);
 
-    // Step 8: Sign snapshot
+    // Step 6: Sign snapshot
     console.log("🔐 Signing snapshot...");
     const signature = await signSnapshotMessage(
       VALIDATOR_PRIVATE_KEY,
@@ -258,7 +292,7 @@ export async function POST(request: NextRequest) {
       timestamp
     );
 
-    // Step 9: Find trigger user's score
+    // Step 7: Find trigger user's score
     const triggerUserScore = usersData.find(
       (u) => u.address.toLowerCase() === triggerAddress.toLowerCase()
     );

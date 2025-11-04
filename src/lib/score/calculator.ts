@@ -86,12 +86,12 @@ export async function calculateChainScore(
     // Calculate transaction score
     // Fetch transaction count
     const txCount = await provider.getTransactionCount(address);
-    const txScore = Math.min(txCount * 2, 500); // Cap at 500 points, 2 points per tx
+    const txScore = Math.min(txCount * 0.01, 50); // Cap at 50 points, 0.01 points per tx
 
     // Estimate contract interactions (transactions to contract addresses)
     // For now, we'll use a simplified approach
     const contractInteractions = Math.floor(txCount * 0.3); // Estimate 30% are contract interactions
-    const contractScore = contractInteractions * 3; // 3 points per contract interaction
+    const contractScore = contractInteractions * 0.01; // 0.01 points per contract interaction
 
     const activity: ChainActivity = {
       txCount,

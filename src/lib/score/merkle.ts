@@ -13,9 +13,14 @@ import { UserScoreData } from "@/types/score.types";
  */
 export function createUserHash(user: UserScoreData): string {
   // Hash user data: address + totalScore + rank + timestamp
+  // Ensure all values are integers (totalScore may be a float)
+  const totalScoreInt = Math.round(user.totalScore);
+  const rankInt = Number(user.rank);
+  const timestampInt = Number(user.lastUpdated);
+
   const hash = ethers.solidityPackedKeccak256(
     ["address", "uint256", "uint256", "uint256"],
-    [user.address, user.totalScore, user.rank, user.lastUpdated]
+    [user.address, totalScoreInt, rankInt, timestampInt]
   );
   return hash;
 }
