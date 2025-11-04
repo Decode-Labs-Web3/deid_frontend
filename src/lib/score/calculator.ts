@@ -81,8 +81,9 @@ export async function calculateChainScore(
     // Fetch ETH balance
     const balanceWei = await provider.getBalance(address);
     const balanceEth = ethers.formatEther(balanceWei);
-    const ethScore = Math.floor(parseFloat(balanceEth) * 100);
+    const ethScore = calculateEthScore(balanceEth);
 
+    // Calculate transaction score
     // Fetch transaction count
     const txCount = await provider.getTransactionCount(address);
     const txScore = Math.min(txCount * 2, 500); // Cap at 500 points, 2 points per tx
@@ -127,6 +128,38 @@ export function calculateContributionScore(updateCount: number): number {
   return updateCount * 1;
 }
 
+/**
+ * Calculate ETH score with diminishing returns as described
+ * @param balanceEthStr - ETH balance as string
+ * @returns ETH score
+ */
+export function calculateEthScore(balanceEthStr: string): number {
+  const balance = parseFloat(balanceEthStr);
+  let score = 0;
+  let remaining = balance;
+
+  const tiers = [
+    { limit: 1, points: 10 }, // first 1 ETH
+    { limit: 9, points: 5 }, // next 9 (2nd to 10th)
+    { limit: 90, points: 2.5 }, // next 90 (11th to 100th)
+    { limit: 900, points: 1 }, // next 900 (101st to 1000th)
+    // ... add more if needed
+  ];
+
+  for (const tier of tiers) {
+    if (remaining <= 0) break;
+    const take = Math.min(remaining, tier.limit);
+    score += take * tier.points;
+    remaining -= take;
+  }
+
+  // If more than 1000 ETH, recursive diminishing (0.5 per ETH, etc.)
+  if (remaining > 0) {
+    score += remaining * 0.5;
+  }
+
+  return Math.floor(score);
+}
 /**
  * Calculate total score from all factors
  * @param factors - All score factors
