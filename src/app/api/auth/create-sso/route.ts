@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const appId = process.env.DEID_APP_ID ?? "deid";
 
-    const origin = req.nextUrl.origin;
+    const origin = process.env.DEID_FRONTEND_URL || "https://app.de-id.xyz";
     const redirectUri = `${origin}/sso`;
 
     const state = randomBytes(16).toString("base64url");
