@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
         "Content-Type": "application/json",
       },
       cache: "no-store",
-      signal: AbortSignal.timeout(10000),
       credentials: "include",
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!backendResponse.ok) {

@@ -234,7 +234,7 @@ const CreateAccount = () => {
       // Fetch profile creation data from backend
       console.log("📡 Fetching profile creation data...");
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
       const response = await fetch(`${backendUrl}/api/v1/sync/create-profile`, {
         method: "POST",
         headers: {
@@ -553,7 +553,7 @@ const CreateAccount = () => {
                         // Try to fetch from backend if not in sessionStorage
                         fetch(
                           `${
-                            process.env.DEID_AUTH_BACKEND ||
+                            process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND ||
                             "http://localhost:8000"
                           }/api/v1/decode/my-profile`,
                           {

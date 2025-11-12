@@ -172,6 +172,8 @@ export async function GET(request: NextRequest) {
                   Accept: "application/json",
                 },
                 // Add timeout to prevent hanging
+                credentials: "include",
+                cache: "no-store",
                 signal: AbortSignal.timeout(10000),
               });
 

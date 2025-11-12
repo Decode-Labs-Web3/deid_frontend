@@ -102,11 +102,11 @@ jobs:
             echo "📦 Installing dependencies..."
             npm install --no-audit || { echo "❌ npm install failed!"; exit 1; }
 
-            echo "🔍 Verifying .env.local exists..."
-            if [ ! -f .env.local ]; then
-              echo "⚠️ Warning: .env.local not found. Make sure environment variables are set on the server."
+            echo "🔍 Verifying .env exists..."
+            if [ ! -f .env ]; then
+              echo "⚠️ Warning: .env not found. Make sure environment variables are set on the server."
             else
-              echo "✅ .env.local found"
+              echo "✅ .env found"
             fi
 
             echo "🏗️ Building application..."

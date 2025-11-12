@@ -44,6 +44,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
         "X-Frontend-Internal-Request": "true",
       },
+      credentials: "include",
       body: JSON.stringify(requestBody),
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
@@ -117,6 +118,7 @@ export async function POST(req: Request) {
           "Content-Type": "application/json",
           Cookie: `deid_session_id=${sessionCookieValue}`, // Manually include cookie for server-side request
         },
+        credentials: "include",
         cache: "no-store",
         signal: AbortSignal.timeout(10000),
       }
