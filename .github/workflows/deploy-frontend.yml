@@ -28,19 +28,54 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # 3️⃣ Install dependencies
-      - name: 📥 Install dependencies
-        run: npm ci
+      # 3️⃣ Verify package files
+      - name: 🔍 Verify package files
+        run: |
+          echo "📋 Checking package.json and package-lock.json..."
+          if [ ! -f package.json ]; then
+            echo "❌ package.json not found!"
+            exit 1
+          fi
+          if [ ! -f package-lock.json ]; then
+            echo "❌ package-lock.json not found!"
+            exit 1
+          fi
+          echo "✅ Package files found"
+          echo "📦 Node version: $(node --version)"
+          echo "📦 NPM version: $(npm --version)"
 
-      # 4️⃣ Run linter
+      # 4️⃣ Install dependencies
+      - name: 📥 Install dependencies
+        run: |
+          echo "📦 Installing dependencies with npm ci..."
+          echo "🧹 Clearing npm cache..."
+          npm cache clean --force || true
+          npm ci --prefer-offline --no-audit || {
+            echo "❌ npm ci failed! This usually means package-lock.json is out of sync."
+            echo "💡 Run 'npm install' locally and commit the updated package-lock.json"
+            echo "📋 Checking package-lock.json integrity..."
+            npm install --package-lock-only --dry-run || true
+            exit 1
+          }
+          echo "✅ Dependencies installed successfully"
+
+      # 5️⃣ Run linter
       - name: 🔍 Run ESLint
         run: npm run lint || echo "⚠️ Linting issues found but continuing"
 
-      # 5️⃣ Build application (test build)
+      # 6️⃣ Build application (test build)
       - name: 🏗️ Build application
-        run: npm run build
+        run: |
+          echo "🏗️ Building Next.js application..."
+          echo "📋 Node version: $(node --version)"
+          echo "📋 NPM version: $(npm --version)"
+          npm run build
         env:
           NODE_ENV: production
+          # Set minimal env vars for build (build should work without full config)
+          NEXT_PUBLIC_DEID_AUTH_BACKEND: ${{ secrets.NEXT_PUBLIC_DEID_AUTH_BACKEND || 'http://localhost:8000' }}
+          NEXT_PUBLIC_PROXY_ADDRESS: ${{ secrets.NEXT_PUBLIC_PROXY_ADDRESS || '0x76050bee51946D027B5548d97C6166e08e5a2B1C' }}
+          NEXT_PUBLIC_IPFS_GATEWAY_URL: ${{ secrets.NEXT_PUBLIC_IPFS_GATEWAY_URL || 'http://35.247.142.76:8080/ipfs' }}
 
   deploy:
     needs: [test]
@@ -59,27 +94,53 @@ jobs:
           host: ${{ secrets.INSTANCE_IP }}
           username: ${{ secrets.INSTANCE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 10m
           script: |
-            cd ~/deid_frontend
+            set -e  # Exit on any error
+
+            cd ~/deid_frontend || { echo "❌ Directory ~/deid_frontend not found!"; exit 1; }
+
             echo "🔄 Pulling latest code..."
-            git pull origin main
+            git pull origin main || { echo "❌ Git pull failed!"; exit 1; }
+
+            echo "📋 Checking Node.js version..."
+            node --version
+            npm --version
+
             echo "📦 Installing dependencies..."
-            npm ci
+            npm ci || { echo "❌ npm ci failed! Make sure package-lock.json is committed."; exit 1; }
+
+            echo "🔍 Verifying .env.local exists..."
+            if [ ! -f .env.local ]; then
+              echo "⚠️ Warning: .env.local not found. Make sure environment variables are set on the server."
+            else
+              echo "✅ .env.local found"
+            fi
+
             echo "🏗️ Building application..."
-            npm run build
+            npm run build || { echo "❌ Build failed!"; exit 1; }
+
             echo "🔄 Restarting PM2 process..."
             # Try to restart existing process, or start new one
             if pm2 list | grep -q "deid-frontend"; then
-              pm2 restart deid-frontend
+              echo "🔄 Restarting existing PM2 process..."
+              pm2 restart deid-frontend || { echo "❌ PM2 restart failed!"; exit 1; }
             else
-              pm2 start ecosystem.config.js || pm2 start "npm run dev" --name deid-frontend --interpreter bash
+              echo "🆕 Starting new PM2 process..."
+              if [ -f ecosystem.config.js ]; then
+                pm2 start ecosystem.config.js || { echo "❌ PM2 start with ecosystem.config.js failed!"; exit 1; }
+              else
+                pm2 start "npm run dev" --name deid-frontend --interpreter bash || { echo "❌ PM2 start failed!"; exit 1; }
+              fi
             fi
-            pm2 save
+
+            pm2 save || echo "⚠️ PM2 save failed (non-critical)"
             pm2 list
+
             echo "✅ Frontend deployment complete!"
             echo "🌐 App should be available at https://app.de-id.xyz"
             echo "📊 Check PM2 status: pm2 status deid-frontend"
-            echo "📝 Check logs: pm2 logs deid-frontend"
+            echo "📝 Check logs: pm2 logs deid-frontend --lines 50"
 
     # ==================== NOTIFICATION ====================
   notify-success:
