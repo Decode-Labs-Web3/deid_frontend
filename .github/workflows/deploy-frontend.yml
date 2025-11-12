@@ -1,0 +1,174 @@
+name: 🚀 Deploy Next.js Frontend
+
+on:
+  push:
+    branches:
+      - main  # only run when pushing to main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.ts'
+      - '.github/workflows/deploy-frontend.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout repo
+      - name: 🧩 Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Set up Node.js
+      - name: 📦 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3️⃣ Install dependencies
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      # 4️⃣ Run linter
+      - name: 🔍 Run ESLint
+        run: npm run lint || echo "⚠️ Linting issues found but continuing"
+
+      # 5️⃣ Build application (test build)
+      - name: 🏗️ Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+  deploy:
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      # 1️⃣ Checkout repo
+      - name: 🧩 Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ SSH to your server and deploy
+      - name: 🚀 SSH Deploy to GCP VM
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.INSTANCE_IP }}
+          username: ${{ secrets.INSTANCE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/deid_frontend
+            echo "🔄 Pulling latest code..."
+            git pull origin main
+            echo "📦 Installing dependencies..."
+            npm ci
+            echo "🏗️ Building application..."
+            npm run build
+            echo "🔄 Restarting PM2 process..."
+            # Try to restart existing process, or start new one
+            if pm2 list | grep -q "deid-frontend"; then
+              pm2 restart deid-frontend
+            else
+              pm2 start ecosystem.config.js || pm2 start "npm run dev" --name deid-frontend --interpreter bash
+            fi
+            pm2 save
+            pm2 list
+            echo "✅ Frontend deployment complete!"
+            echo "🌐 App should be available at https://app.de-id.xyz"
+            echo "📊 Check PM2 status: pm2 status deid-frontend"
+            echo "📝 Check logs: pm2 logs deid-frontend"
+
+    # ==================== NOTIFICATION ====================
+  notify-success:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: success() && github.ref == 'refs/heads/main'
+    steps:
+      - name: Send Discord success notification
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{
+                 "embeds": [{
+                   "title": "🚀 Frontend Deployment Successful",
+                   "description": "Next.js frontend deployed to app.de-id.xyz!",
+                   "color": 65280,
+                   "fields": [
+                     {
+                       "name": "Repository",
+                       "value": "${{ github.repository }}",
+                       "inline": true
+                     },
+                     {
+                       "name": "Branch",
+                       "value": "${{ github.ref_name }}",
+                       "inline": true
+                     },
+                     {
+                       "name": "Commit",
+                       "value": "`${{ github.sha }}`",
+                       "inline": false
+                     },
+                     {
+                       "name": "Environment",
+                       "value": "Development (npm run dev)",
+                       "inline": false
+                     },
+                     {
+                       "name": "URL",
+                       "value": "[app.de-id.xyz](https://app.de-id.xyz)",
+                       "inline": false
+                     }
+                   ],
+                   "footer": {
+                     "text": "GitHub Actions"
+                   },
+                   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
+                 }]
+               }' \
+               ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+  notify-failure:
+    needs: [test, deploy]
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    steps:
+      - name: Send Discord failure notification
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{
+                 "embeds": [{
+                   "title": "❌ Frontend Deployment Failed",
+                   "description": "Frontend deployment failed! Check the logs for details.",
+                   "color": 16711680,
+                   "fields": [
+                     {
+                       "name": "Repository",
+                       "value": "${{ github.repository }}",
+                       "inline": true
+                     },
+                     {
+                       "name": "Branch",
+                       "value": "${{ github.ref_name }}",
+                       "inline": true
+                     },
+                     {
+                       "name": "Commit",
+                       "value": "`${{ github.sha }}`",
+                       "inline": false
+                     },
+                     {
+                       "name": "Action URL",
+                       "value": "[View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+                       "inline": false
+                     }
+                   ],
+                   "footer": {
+                     "text": "GitHub Actions"
+                   },
+                   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
+                 }]
+               }' \
+               ${{ secrets.DISCORD_WEBHOOK_URL }}

@@ -33,11 +33,11 @@ Add these to your `.env.local` file:
 
 ```bash
 # Backend API URL
-DEID_AUTH_BACKEND=http://0.0.0.0:8000
+NEXT_PUBLIC_DEID_AUTH_BACKEND=http://0.0.0.0:8000
 
 # Backend API URL (REQUIRED)
 # Backend handles contract interactions
-DEID_AUTH_BACKEND=http://0.0.0.0:8000
+NEXT_PUBLIC_DEID_AUTH_BACKEND=http://0.0.0.0:8000
 
 # IPFS Gateway (optional)
 NEXT_PUBLIC_IPFS_GATEWAY=https://ipfs.io
@@ -282,7 +282,7 @@ Badge minted ✅
 
 ### "Backend API not configured"
 
-**Solution**: Set `DEID_AUTH_BACKEND` in `.env.local` to your backend API URL
+**Solution**: Set `NEXT_PUBLIC_DEID_AUTH_BACKEND` in `.env.local` to your backend API URL
 
 ### "Please connect your wallet first"
 

@@ -35,8 +35,9 @@ export async function POST(req: Request) {
     };
 
     // Send SSO token to your backend for validation and session creation
-    const backendUrl = `${process.env.DEID_AUTH_BACKEND}/api/v1/decode/sso-validate`;
+    const backendUrl = `${process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND}/api/v1/decode/sso-validate`;
 
+    // Server-to-server call to backend
     const backendRes = await fetch(backendUrl, {
       method: "POST",
       headers: {
@@ -44,7 +45,6 @@ export async function POST(req: Request) {
         "X-Frontend-Internal-Request": "true",
       },
       body: JSON.stringify(requestBody),
-      credentials: "include", // Important: Include cookies in the request
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
@@ -61,28 +61,61 @@ export async function POST(req: Request) {
       );
     }
 
-    await backendRes.json();
+    // Extract the session cookie from backend response
+    // This is a SERVER-SIDE fetch, so we need to manually extract and forward the cookie
+    // Note: headers.get() returns the first value, but there might be multiple Set-Cookie headers
+    const setCookieHeaders = backendRes.headers.getSetCookie?.() || [];
+    const setCookieHeader = backendRes.headers.get("set-cookie") || "";
 
-    // Extract the session cookie from the backend response
-    const setCookieHeader = backendRes.headers.get("set-cookie");
-    let sessionCookie = "";
+    let sessionCookieValue = "";
+    let deidSessionCookieHeader = "";
 
-    if (setCookieHeader) {
-      // Extract just the cookie value and name
-      const cookieMatch = setCookieHeader.match(/deid_session_id=([^;]+)/);
-      if (cookieMatch) {
-        sessionCookie = `deid_session_id=${cookieMatch[1]}`;
+    // Find the deid_session_id cookie
+    if (setCookieHeaders.length > 0) {
+      // Use getSetCookie() if available (Node.js 18+)
+      deidSessionCookieHeader =
+        setCookieHeaders.find((cookie) =>
+          cookie.startsWith("deid_session_id=")
+        ) || "";
+    } else if (setCookieHeader) {
+      // Fallback: parse single Set-Cookie header
+      if (setCookieHeader.includes("deid_session_id=")) {
+        deidSessionCookieHeader = setCookieHeader;
       }
     }
 
-    // If SSO validation is successful, verify session by calling profile endpoint
+    if (deidSessionCookieHeader) {
+      // Extract just the cookie value (before first semicolon)
+      const cookieMatch = deidSessionCookieHeader.match(
+        /deid_session_id=([^;]+)/
+      );
+      if (cookieMatch) {
+        sessionCookieValue = cookieMatch[1];
+        console.log("✅ Extracted session cookie from backend response");
+      }
+    }
+
+    if (!sessionCookieValue) {
+      console.error("❌ No session cookie found in backend response");
+      return NextResponse.json(
+        {
+          success: false,
+          statusCode: 401,
+          message: "No session cookie received from backend",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Verify session by calling profile endpoint
+    // For server-side requests, we must manually include the cookie in the Cookie header
     const profileRes = await fetch(
-      `${process.env.DEID_AUTH_BACKEND}/api/v1/decode/my-profile`,
+      `${process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND}/api/v1/decode/my-profile`,
       {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          ...(sessionCookie && { Cookie: sessionCookie }), // Manually set the cookie
+          Cookie: `deid_session_id=${sessionCookieValue}`, // Manually include cookie for server-side request
         },
         cache: "no-store",
         signal: AbortSignal.timeout(10000),
@@ -104,7 +137,7 @@ export async function POST(req: Request) {
     const profileData = await profileRes.json();
     const primaryWalletAddress = profileData?.data?.primary_wallet?.address;
 
-    // Clean up SSO state cookie and set session cookie
+    // Clean up SSO state cookie
     const res = NextResponse.json(
       {
         success: true,
@@ -117,20 +150,19 @@ export async function POST(req: Request) {
       { status: 200 }
     );
 
+    // Delete the temporary ssoState cookie (this is on frontend domain)
     res.cookies.delete("ssoState");
 
-    // Set the session cookie if we have it
-    if (sessionCookie) {
-      const cookieMatch = sessionCookie.match(/deid_session_id=([^;]+)/);
-      if (cookieMatch) {
-        res.cookies.set("deid_session_id", cookieMatch[1], {
-          httpOnly: false, // Allow client-side access for session management
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 7 * 24 * 60 * 60, // 7 days
-          path: "/",
-        });
-      }
+    // IMPORTANT: Forward the Set-Cookie header from backend to browser
+    // The backend set a cookie for api.de-id.xyz, but since this is a server-side fetch,
+    // the browser never saw the Set-Cookie header. We need to forward it.
+    if (deidSessionCookieHeader) {
+      // Forward the Set-Cookie header to the browser
+      // The browser will store it for api.de-id.xyz domain (as specified in the Domain attribute)
+      res.headers.append("Set-Cookie", deidSessionCookieHeader);
+      console.log("✅ Forwarded Set-Cookie header to browser");
+    } else {
+      console.warn("⚠️ No deid_session_id cookie header to forward");
     }
 
     return res;

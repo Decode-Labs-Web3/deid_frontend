@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const backendUrl = process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+    const backendUrl =
+      process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
     const backendApiUrl = `${backendUrl}/api/v1/decode/profile/create?wallet=${walletAddress}`;
 
     console.log(
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
       },
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
+      credentials: "include",
     });
 
     if (!backendResponse.ok) {

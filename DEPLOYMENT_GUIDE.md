@@ -28,7 +28,7 @@ VALIDATOR_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
 CRON_SECRET=your_random_secret_string
 
 # Backend
-DEID_AUTH_BACKEND=http://localhost:8000
+NEXT_PUBLIC_DEID_AUTH_BACKEND=http://localhost:8000
 ```
 
 ### 2. Install Dependencies

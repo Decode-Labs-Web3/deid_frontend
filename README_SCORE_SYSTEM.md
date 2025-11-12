@@ -157,7 +157,7 @@ VALIDATOR_PRIVATE_KEY=0x...
 CRON_SECRET=random_secret
 
 # Backend API
-DEID_AUTH_BACKEND=http://localhost:8000
+NEXT_PUBLIC_DEID_AUTH_BACKEND=http://localhost:8000
 ```
 
 ## IPFS Integration

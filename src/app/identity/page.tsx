@@ -127,7 +127,7 @@ const Identity = () => {
         // Step 1: Fetch user data from backend first
         console.log("📡 Fetching user data from backend...");
         const backendUrl =
-          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+          process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
         const backendResponse = await fetch(
           `${backendUrl}/api/v1/decode/my-profile`,
           {
@@ -369,7 +369,7 @@ const Identity = () => {
       // Fetch update profile data from backend
       console.log("📡 Fetching update profile data...");
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
       const response = await fetch(`${backendUrl}/api/v1/sync/update-profile`, {
         method: "POST",
         headers: {
@@ -581,7 +581,7 @@ const Identity = () => {
       }
       console.log("🔍 Fetching verified social accounts...");
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
 
       const response = await fetch(
         `${backendUrl}/api/v1/social/links?status=verified`,
@@ -623,7 +623,7 @@ const Identity = () => {
       setConnectingPlatform(platform);
 
       const backendUrl =
-        process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+        process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
 
       if (platform === "discord") {
         // Get Discord OAuth URL
@@ -844,7 +844,7 @@ const Identity = () => {
       // Optionally, update the backend with tx_hash
       try {
         const backendUrl =
-          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+          process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
         await fetch(`${backendUrl}/api/v1/social/links/${account.id}/tx-hash`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

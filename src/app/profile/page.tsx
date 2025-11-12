@@ -137,7 +137,7 @@ const Profile = () => {
         // Step 1: Fetch user data from backend first
         console.log("📡 Fetching user data from backend...");
         const backendUrl =
-          process.env.DEID_AUTH_BACKEND || "http://localhost:8000";
+          process.env.NEXT_PUBLIC_DEID_AUTH_BACKEND || "http://localhost:8000";
         const backendResponse = await fetch(
           `${backendUrl}/api/v1/decode/my-profile`,
           {
@@ -146,6 +146,8 @@ const Profile = () => {
             credentials: "include",
           }
         );
+
+        console.log("DEBUG user data fetching ", backendResponse);
 
         if (!backendResponse.ok) {
           throw new Error(`Backend API error: ${backendResponse.statusText}`);
