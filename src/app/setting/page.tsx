@@ -111,7 +111,6 @@ const Setting = () => {
                         : "data-[state=checked]:bg-pink-600 data-[state=checked]:border-pink-600 data-[state=unchecked]:bg-gray-300 data-[state=unchecked]:border-gray-300 transition-colors duration-200"
                       : "bg-pink-200 border-pink-200"
                   }
-                  classNameLabel="transition-colors duration-200"
                 />
               </div>
             </CardContent>

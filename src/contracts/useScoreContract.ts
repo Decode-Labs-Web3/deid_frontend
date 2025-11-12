@@ -29,7 +29,9 @@ export function useScoreContract() {
     try {
       // Get provider from window.ethereum
       if (typeof window !== "undefined" && window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        // Type assertion for EIP-1193 provider
+        const ethereumProvider = window.ethereum as ethers.Eip1193Provider;
+        const provider = new ethers.BrowserProvider(ethereumProvider);
 
         // Get signer
         const getSigner = async () => {

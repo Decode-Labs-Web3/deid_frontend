@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 
-export default function SSOCallback() {
+// Component that uses useSearchParams - must be wrapped in Suspense
+function SSOCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const ssoToken = searchParams.get("sso_token");
@@ -70,5 +71,29 @@ export default function SSOCallback() {
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     </div>
+  );
+}
+
+export default function SSOCallback() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-6">
+            <Image
+              src="/deid_logo.png"
+              alt="DEiD Logo"
+              width={200}
+              height={200}
+              className="animate-pulse"
+            />
+            <h1 className="text-3xl font-bold">Loading...</h1>
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      }
+    >
+      <SSOCallbackContent />
+    </Suspense>
   );
 }

@@ -1,11 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { usePageTransition } from "@/hooks/use-page-transition";
 import { getSessionId } from "@/utils/session.utils";
+
+// Component that uses useSearchParams - must be wrapped in Suspense
+const LoginContent = ({
+  onError,
+}: {
+  onError: (error: string | null) => void;
+}) => {
+  const searchParams = useSearchParams();
+
+  // Check for error from SSO callback
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      onError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams, onError]);
+
+  return null;
+};
 
 const Login = () => {
   const { isVisible } = usePageTransition({
@@ -14,7 +33,6 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   // Check if user is already logged in
@@ -29,14 +47,6 @@ const Login = () => {
       console.log("Login page - No session found, staying on login page");
     }
   }, [router]);
-
-  // Check for error from SSO callback
-  useEffect(() => {
-    const errorParam = searchParams.get("error");
-    if (errorParam) {
-      setError(decodeURIComponent(errorParam));
-    }
-  }, [searchParams]);
 
   const handleSSOLogin = async () => {
     try {
@@ -69,6 +79,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+      <Suspense fallback={null}>
+        <LoginContent onError={setError} />
+      </Suspense>
       <div
         className={`flex flex-col items-center max-w-4xl transition-all duration-600 ease-in-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"

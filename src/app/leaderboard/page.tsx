@@ -122,11 +122,11 @@ export default function LeaderboardPage() {
           </TabsList>
 
           <TabsContent value="top10" className="space-y-6">
-            <Leaderboard limit={10} currentUserAddress={address} floorScores />
+            <Leaderboard limit={10} currentUserAddress={address} />
           </TabsContent>
 
           <TabsContent value="top100" className="space-y-6">
-            <Leaderboard limit={100} currentUserAddress={address} floorScores />
+            <Leaderboard limit={100} currentUserAddress={address} />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">

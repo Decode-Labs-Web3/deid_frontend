@@ -107,7 +107,14 @@ export async function POST(request: NextRequest) {
             socialAccounts,
             streakDays,
             ethBalance,
-            chainActivity: activity,
+            // Placeholder; the calculator computes real activity internally
+            chainActivity: {
+              txCount: 0,
+              firstTx: null,
+              lastTx: null,
+              contractInteractions: 0,
+              gasSpent: "0",
+            },
             updateCount: 0, // No bonus for automated updates
           },
           provider

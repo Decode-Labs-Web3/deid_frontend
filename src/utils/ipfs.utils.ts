@@ -96,27 +96,28 @@ const parseProfileMetadata = (
 ): ProfileMetadata => {
   try {
     // Handle nested data structure if present
-    const data = metadataDict.data || metadataDict;
+    const data = (metadataDict.data || metadataDict) as Record<string, unknown>;
     console.log("📊 Raw metadata data:", JSON.stringify(data, null, 2));
 
     // Parse primary wallet with field name mapping
-    const primaryWalletData = data.primary_wallet || {};
+    const primaryWalletData =
+      (data.primary_wallet as Record<string, unknown>) || {};
     const primaryWallet = parseWalletData(primaryWalletData);
 
     // Parse wallets list
-    const walletsData = data.wallets || [];
+    const walletsData = (data.wallets as Array<Record<string, unknown>>) || [];
     const wallets = walletsData.map((walletData: any) =>
       parseWalletData(walletData)
     );
 
     return {
-      username: data.username || "",
-      display_name: data.display_name || "",
-      bio: data.bio || "",
-      avatar_ipfs_hash: data.avatar_ipfs_hash || "",
+      username: (data.username as string) || "",
+      display_name: (data.display_name as string) || "",
+      bio: (data.bio as string) || "",
+      avatar_ipfs_hash: (data.avatar_ipfs_hash as string) || "",
       primary_wallet: primaryWallet,
       wallets: wallets,
-      decode_user_id: data.decode_user_id || "",
+      decode_user_id: (data.decode_user_id as string) || "",
     };
   } catch (error) {
     console.error("❌ Error parsing metadata:", error);
@@ -139,7 +140,7 @@ const parseWalletData = (walletData: any) => {
   const version = walletData.version || walletData.__v || 0;
 
   return {
-    _id: walletId,
+    id: walletId,
     address: walletData.address || "",
     user_id: walletData.user_id || "",
     name_service: walletData.name_service || null,
