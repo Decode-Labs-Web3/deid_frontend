@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { TrustWheel } from "@/components/charts/TrustWheel";
-import { Loader2, AlertCircle, ArrowLeft, User } from "lucide-react";
+import { User } from "lucide-react";
 import {
   OnChainProfileData,
   checkOnChainProfile,
@@ -16,9 +15,11 @@ import { ethers } from "ethers";
 import DEID_PROFILE_ABI from "@/contracts/core/DEiDProfile.sol/DEiDProfile.json";
 import { fetchAllUserBadges, type UserBadge } from "@/utils/badge.utils";
 import { ProfileCard } from "@/components/cards/ProfileCard";
-import { Leaderboard } from "@/components/score/Leaderboard";
-import { ScoreCard } from "@/components/score/ScoreCard";
-import { useScore } from "@/hooks/useScore";
+import { IPFSLoadingAnimation, IPFSErrorAnimation } from "@/components/common";
+import { fetchUserScoreData } from "@/utils/score.client";
+import { UserScoreData } from "@/types/score.types";
+import { WalletActivity } from "@/components/profile/WalletActivity";
+import { BadgeGrid } from "@/components/profile/BadgeGrid";
 
 // Contract configuration - using environment variable or fallback
 const PROXY_ADDRESS =
@@ -27,13 +28,16 @@ const PROXY_ADDRESS =
 
 const UserProfile = () => {
   const params = useParams();
-  const router = useRouter();
   const identifier = params.identifier as string;
 
   const [profileData, setProfileData] = useState<OnChainProfileData | null>(
     null
   );
+  const [userScoreData, setUserScoreData] = useState<UserScoreData | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
+  const [scoreLoading, setScoreLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [onChainAccounts, setOnChainAccounts] = useState<
@@ -145,9 +149,39 @@ const UserProfile = () => {
         setProfileData(onChainProfile);
         console.log("✅ Profile data set in state");
 
-        // Fetch user badges
-        console.log("\n🏆 Fetching user badges...");
-        fetchUserBadges(walletAddress);
+        // Fetch comprehensive score data
+        console.log("\n📊 Fetching comprehensive score data...");
+        setScoreLoading(true);
+        try {
+          const scoreData = await fetchUserScoreData(walletAddress);
+          if (scoreData) {
+            setUserScoreData(scoreData);
+            console.log("✅ Score data loaded:", {
+              totalScore: scoreData.totalScore,
+              rank: scoreData.rank,
+              badgesCount: scoreData.badges?.length || 0,
+            });
+
+            // Use badges from score data if available
+            if (scoreData.badges && scoreData.badges.length > 0) {
+              setUserBadges(scoreData.badges);
+            } else {
+              // Fallback to fetching badges separately
+              fetchUserBadges(walletAddress);
+            }
+          } else {
+            console.log(
+              "⚠️ User not found in snapshot, fetching badges separately"
+            );
+            fetchUserBadges(walletAddress);
+          }
+        } catch (scoreError) {
+          console.error("❌ Error fetching score data:", scoreError);
+          // Continue with profile display even if score fetch fails
+          fetchUserBadges(walletAddress);
+        } finally {
+          setScoreLoading(false);
+        }
 
         // Fetch on-chain social accounts
         console.log("\n🔗 Fetching on-chain social accounts...");
@@ -198,16 +232,12 @@ const UserProfile = () => {
 
   // walletAddress from profile_metadata.primary_wallet.address (if available)
   const walletAddress = profileData?.profile_metadata?.primary_wallet?.address;
-  const { score } = useScore(walletAddress);
 
   if (loading) {
     console.log("🔄 Rendering loading state...");
     return (
       <AppLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-3 text-muted-foreground">Loading profile...</span>
-        </div>
+        <IPFSLoadingAnimation />
       </AppLayout>
     );
   }
@@ -216,19 +246,10 @@ const UserProfile = () => {
     console.log("❌ Rendering error state:", error);
     return (
       <AppLayout>
-        <div className="max-w-4xl mx-auto p-8">
-          <Card className="border-destructive">
-            <CardContent className="p-8 text-center">
-              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-              <p className="text-muted-foreground mb-4">{error}</p>
-              <Button onClick={() => router.back()} variant="outline">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Go Back
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        <IPFSErrorAnimation
+          errorMessage={error}
+          onRetry={() => window.location.reload()}
+        />
       </AppLayout>
     );
   }
@@ -259,21 +280,61 @@ const UserProfile = () => {
     socialAccountCount: onChainAccounts.length,
   });
 
+  // Use badges from score data if available, otherwise use separately fetched badges
+  const displayBadges = userScoreData?.badges || userBadges;
+  // Use social accounts from score data if available, otherwise use on-chain accounts
+  const displaySocialAccounts =
+    userScoreData?.socialAccounts || onChainAccounts;
+
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto p-4 md:p-8">
-        {/* Top row: 2 columns, responsive */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <ProfileCard
-            username={profileData?.profile_metadata?.username}
-            display_name={profileData?.profile_metadata?.display_name}
-            bio={profileData?.profile_metadata?.bio}
-            avatar_ipfs_hash={profileData?.profile_metadata?.avatar_ipfs_hash}
-            primary_wallet_address={walletAddress}
-            socialAccounts={onChainAccounts}
-          />
+      <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
+        {/* Header Section: Profile Card + Trust Wheel */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column: Profile Card + Wallet Activity */}
+          <div className="space-y-6">
+            <ProfileCard
+              username={profileData?.profile_metadata?.username}
+              display_name={profileData?.profile_metadata?.display_name}
+              bio={profileData?.profile_metadata?.bio}
+              avatar_ipfs_hash={profileData?.profile_metadata?.avatar_ipfs_hash}
+              primary_wallet_address={walletAddress}
+              socialAccounts={displaySocialAccounts}
+            />
+            {/* Compact Wallet Activity */}
+            {userScoreData && (
+              <div className="animate-fade-in-up">
+                <WalletActivity
+                  walletActivity={userScoreData.walletActivity}
+                  ethBalance={userScoreData.ethBalance}
+                />
+              </div>
+            )}
+          </div>
+          {/* Right Column: Trust Wheel */}
           <TrustWheel address={walletAddress} />
         </div>
+
+        {/* Badges Section - Full Width */}
+        {displayBadges.length > 0 && (
+          <div className="animate-fade-in-up">
+            <BadgeGrid badges={displayBadges} />
+          </div>
+        )}
+
+        {/* Loading indicator for score data */}
+        {scoreLoading && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <span className="text-muted-foreground">
+                  Loading score data...
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );
