@@ -5,7 +5,6 @@
 
 "use client";
 
-import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Leaderboard } from "@/components/score/Leaderboard";
 import { RefreshScoreButton } from "@/components/score/RefreshScoreButton";
@@ -13,29 +12,54 @@ import { SnapshotHistory } from "@/components/score/SnapshotHistory";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { useAccount } from "wagmi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Search, TrendingUp, Clock } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 export default function LeaderboardPage() {
   const { address } = useAccount();
-  const { snapshot, loading, refresh } = useSnapshot();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLimit, setSelectedLimit] = useState(25);
+  const { snapshot, refresh } = useSnapshot();
 
-  // Define a util for floor-ing score fields in the snapshot metadata
-  const getFlooredMetadata = (metadata: any) => {
-    if (!metadata) return {};
+  // Format score to max 2 decimals
+  const formatScore = (score: number): string => {
+    return Number(score.toFixed(2)).toString();
+  };
+
+  // Define a util for formatting score fields in the snapshot metadata
+  const getFormattedMetadata = (metadata: {
+    totalUsers?: number;
+    topScore: number;
+    averageScore: number;
+    totalBadges?: number;
+  }): {
+    totalUsers?: number;
+    topScore: string;
+    averageScore: string;
+    totalBadges?: number;
+  } => {
+    if (!metadata) {
+      return {
+        totalUsers: 0,
+        topScore: "0",
+        averageScore: "0",
+        totalBadges: 0,
+      };
+    }
     return {
       ...metadata,
-      topScore: Math.floor(metadata.topScore),
-      averageScore: Math.floor(metadata.averageScore),
+      topScore: formatScore(metadata.topScore),
+      averageScore: formatScore(metadata.averageScore),
       // add others as necessary for future expansion
     };
   };
 
-  const flooredMetadata = snapshot ? getFlooredMetadata(snapshot.metadata) : {};
+  const formattedMetadata = snapshot
+    ? getFormattedMetadata(snapshot.metadata)
+    : {
+        totalUsers: 0,
+        topScore: "0",
+        averageScore: "0",
+        totalBadges: 0,
+      };
 
   return (
     <AppLayout>
@@ -67,7 +91,7 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {flooredMetadata.totalUsers ?? snapshot.metadata.totalUsers}
+                  {formattedMetadata.totalUsers ?? snapshot.metadata.totalUsers}
                 </div>
               </CardContent>
             </Card>
@@ -80,7 +104,7 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {flooredMetadata.topScore}
+                  {formattedMetadata.topScore}
                 </div>
               </CardContent>
             </Card>
@@ -93,7 +117,7 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {flooredMetadata.averageScore}
+                  {formattedMetadata.averageScore}
                 </div>
               </CardContent>
             </Card>
@@ -106,7 +130,8 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {flooredMetadata.totalBadges ?? snapshot.metadata.totalBadges}
+                  {formattedMetadata.totalBadges ??
+                    snapshot.metadata.totalBadges}
                 </div>
               </CardContent>
             </Card>

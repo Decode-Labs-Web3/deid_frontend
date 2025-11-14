@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Trophy, Medal, Award } from "lucide-react";
-import { convertIPFSUrlToHttp } from "@/utils/ipfs.utils";
 
 interface LeaderboardProps {
   limit?: number;
@@ -144,7 +143,7 @@ export function Leaderboard({
             currentUserAddress &&
             user.address.toLowerCase() === currentUserAddress.toLowerCase();
 
-          // Compute avatar: prefer profile_metadata.avatar_ipfs_hash, fallback to first badge image
+          // Compute avatar: only use profile_metadata.avatar_ipfs_hash, no badge fallback
           const avatarSrc = (() => {
             const meta = (
               user as unknown as {
@@ -157,12 +156,8 @@ export function Leaderboard({
                 "http://35.247.142.76:8080/ipfs";
               return `${base}/${meta.avatar_ipfs_hash}`;
             }
-            const firstBadgeImg = user.badges?.[0]?.metadata?.image as
-              | string
-              | undefined;
-            return firstBadgeImg
-              ? convertIPFSUrlToHttp(firstBadgeImg)
-              : undefined;
+            // No fallback to badge images - use undefined to show initials
+            return undefined;
           })();
 
           return (
@@ -218,7 +213,9 @@ export function Leaderboard({
 
               {/* Score */}
               <div className="text-right">
-                <div className="text-lg font-bold">{user.totalScore}</div>
+                <div className="text-lg font-bold">
+                  {Number(user.totalScore.toFixed(2))}
+                </div>
                 <div className="text-xs text-muted-foreground">points</div>
               </div>
             </div>
