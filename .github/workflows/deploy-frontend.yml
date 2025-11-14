@@ -90,13 +90,12 @@ jobs:
           script: |
             set -e  # Exit on any error
 
-            cd ~/deid_frontend || { echo "❌ Directory ~/deid_frontend not found!"; exit 1; }
+            cd ~/deid_frontend
 
             echo "🔄 Pulling latest code..."
-            git pull origin main || { echo "❌ Git pull failed!"; exit 1; }
-
+            git pull origin main
             echo "📦 Installing dependencies..."
-            npm install --no-audit || { echo "❌ npm install failed!"; exit 1; }
+            npm install --no-audit
 
             echo "🔍 Verifying .env exists..."
             if [ ! -f .env ]; then
@@ -106,7 +105,7 @@ jobs:
             fi
 
             echo "🏗️ Building application..."
-            npm run build || { echo "❌ Build failed!"; exit 1; }
+            npm run build
 
             echo "🔄 Restarting PM2 process..."
             # Try to restart existing process, or start new one
