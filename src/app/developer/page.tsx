@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   Card,
@@ -14,95 +15,642 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Code,
-  Key,
-  Zap,
   BookOpen,
   Terminal,
-  Shield,
-  Clock,
-  Users,
-  Database,
   ExternalLink,
   Copy,
   Check,
+  Info,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import {
+  LibrarySelector,
+  type Library,
+} from "@/components/developer/LibrarySelector";
+import { CodeExample } from "@/components/developer/CodeExample";
+
+const PROXY_ADDRESS = "0xfcd6b7875C34c02846F55408038CbC35bC5A0BEF";
+const IPFS_GATEWAY_URL = "https://ipfs.de-id.xyz/ipfs";
+const NETWORK = "Sepolia Testnet";
+const RPC_URL = "https://sepolia.infura.io/v3/YOUR_INFURA_KEY";
 
 export default function DeveloperPortal() {
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [avgResponse, setAvgResponse] = useState(50);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [library, setLibrary] = useState<Library>("ethers");
 
-  const copyToClipboard = (code: string, id: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(id);
-    setTimeout(() => setCopiedCode(null), 2000);
+  // Code examples for Fetch User Profile
+  const profileCode = {
+    ethers: `import { ethers } from "ethers";
+import DEID_PROFILE_ABI from "./DEiDProfile.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+
+async function fetchUserProfile(walletAddress: string) {
+  // 1. Create provider
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+
+  // 2. Connect to DEiDProfile contract via proxy
+  const contract = new ethers.Contract(
+    PROXY_ADDRESS,
+    DEID_PROFILE_ABI.abi,
+    provider
+  );
+
+  // 3. Fetch profile data
+  const profile = await contract.getProfile(walletAddress);
+
+  // 4. Parse profile data
+  const profileData = {
+    username: profile.username,
+    metadataURI: profile.metadataURI,
+    wallets: profile.wallets,
+    socialAccounts: profile.socialAccounts,
+    createdAt: Number(profile.createdAt),
+    lastUpdated: Number(profile.lastUpdated),
+    isActive: profile.isActive,
   };
 
-  // Update average response time every 2-3 seconds
-  useEffect(() => {
-    const updateResponseTime = () => {
-      setIsUpdating(true);
-
-      // Show updating flash for 200ms
-      setTimeout(() => {
-        const newResponseTime = Math.floor(Math.random() * 51) + 50; // 50-100ms
-        setAvgResponse(newResponseTime);
-        setIsUpdating(false);
-      }, 200);
-
-      // Schedule next update in 2-3 seconds
-      const nextUpdate = Math.floor(Math.random() * 1000) + 2000; // 2-3 seconds
-      setTimeout(updateResponseTime, nextUpdate);
-    };
-
-    // Start the first update after 2-3 seconds
-    const initialDelay = Math.floor(Math.random() * 1000) + 2000;
-    const timeoutId = setTimeout(updateResponseTime, initialDelay);
-
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  const codeExamples = {
-    auth: `// Authentication Example
-const response = await fetch('/api/v1/auth/login', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    walletAddress: '0x...',
-    signature: '0x...'
-  })
-});
-
-const { token } = await response.json();`,
-
-    profile: `// Get User Profile
-const profile = await fetch('/api/v1/profile/me', {
-  headers: {
-    'Authorization': \`Bearer \${token}\`
+  // 5. Fetch metadata from IPFS if available
+  let metadata = null;
+  if (profile.metadataURI && profile.metadataURI !== "") {
+    const ipfsHash = profile.metadataURI.replace("ipfs://", "");
+    const response = await fetch(\`${IPFS_GATEWAY_URL}/\${ipfsHash}\`);
+    metadata = await response.json();
   }
-});
 
-const userData = await profile.json();`,
+  return { profile: profileData, metadata };
+}
 
-    nft: `// Mint NFT Badge
-const mintResponse = await fetch('/api/v1/badge/mint', {
-  method: 'POST',
-  headers: {
-    'Authorization': \`Bearer \${token}\`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    badgeType: 'verification',
-    metadata: {
-      title: 'Verified Developer',
-      description: 'Certified blockchain developer'
-    }
-  })
-});`,
+// Usage
+const result = await fetchUserProfile("0x...");
+console.log(result);`,
+
+    viem: `import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+import DEID_PROFILE_ABI from "./DEiDProfile.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+
+async function fetchUserProfile(walletAddress: \`0x\${string}\`) {
+  // 1. Create public client
+  const client = createPublicClient({
+    chain: sepolia,
+    transport: http(RPC_URL),
+  });
+
+  // 2. Fetch profile data
+  const profile = await client.readContract({
+    address: PROXY_ADDRESS as \`0x\${string}\`,
+    abi: DEID_PROFILE_ABI.abi,
+    functionName: "getProfile",
+    args: [walletAddress],
+  });
+
+  // 3. Parse profile data
+  const profileData = {
+    username: profile.username,
+    metadataURI: profile.metadataURI,
+    wallets: profile.wallets,
+    socialAccounts: profile.socialAccounts,
+    createdAt: Number(profile.createdAt),
+    lastUpdated: Number(profile.lastUpdated),
+    isActive: profile.isActive,
+  };
+
+  // 4. Fetch metadata from IPFS if available
+  let metadata = null;
+  if (profile.metadataURI && profile.metadataURI !== "") {
+    const ipfsHash = profile.metadataURI.replace("ipfs://", "");
+    const response = await fetch(\`${IPFS_GATEWAY_URL}/\${ipfsHash}\`);
+    metadata = await response.json();
+  }
+
+  return { profile: profileData, metadata };
+}
+
+// Usage
+const result = await fetchUserProfile("0x...");
+console.log(result);`,
+
+    web3: `import Web3 from "web3";
+import DEID_PROFILE_ABI from "./DEiDProfile.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+
+async function fetchUserProfile(walletAddress: string) {
+  // 1. Create Web3 instance
+  const web3 = new Web3(RPC_URL);
+
+  // 2. Create contract instance
+  const contract = new web3.eth.Contract(
+    DEID_PROFILE_ABI.abi,
+    PROXY_ADDRESS
+  );
+
+  // 3. Fetch profile data
+  const profile = await contract.methods.getProfile(walletAddress).call();
+
+  // 4. Parse profile data
+  const profileData = {
+    username: profile.username,
+    metadataURI: profile.metadataURI,
+    wallets: profile.wallets,
+    socialAccounts: profile.socialAccounts,
+    createdAt: Number(profile.createdAt),
+    lastUpdated: Number(profile.lastUpdated),
+    isActive: profile.isActive,
+  };
+
+  // 5. Fetch metadata from IPFS if available
+  let metadata = null;
+  if (profile.metadataURI && profile.metadataURI !== "") {
+    const ipfsHash = profile.metadataURI.replace("ipfs://", "");
+    const response = await fetch(\`${IPFS_GATEWAY_URL}/\${ipfsHash}\`);
+    metadata = await response.json();
+  }
+
+  return { profile: profileData, metadata };
+}
+
+// Usage
+const result = await fetchUserProfile("0x...");
+console.log(result);`,
+  };
+
+  // Code examples for Fetch Trust Score
+  const scoreCode = {
+    ethers: `import { ethers } from "ethers";
+import SCORE_FACET_ABI from "./ScoreFacet.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+const IPFS_GATEWAY_URL = "${IPFS_GATEWAY_URL}";
+
+async function fetchUserScore(walletAddress: string) {
+  // 1. Create provider and connect to ScoreFacet
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+  const contract = new ethers.Contract(
+    PROXY_ADDRESS,
+    SCORE_FACET_ABI.abi,
+    provider
+  );
+
+  // 2. Get latest snapshot from contract
+  const [cid, root, id, timestamp] = await contract.getLatestSnapshot();
+
+  if (!cid || cid.length === 0) {
+    throw new Error("No snapshot found");
+  }
+
+  // 3. Fetch snapshot data from IPFS
+  const normalizedCID = cid.startsWith("ipfs://")
+    ? cid.replace("ipfs://", "")
+    : cid;
+  const response = await fetch(\`\${IPFS_GATEWAY_URL}/\${normalizedCID}\`);
+  const snapshotData = await response.json();
+
+  // 4. Find user in snapshot
+  const normalizedAddress = walletAddress.toLowerCase();
+  const userData = snapshotData.users.find(
+    (u: any) => u.address.toLowerCase() === normalizedAddress
+  );
+
+  if (!userData) {
+    return null;
+  }
+
+  // 5. Return user score data
+  return {
+    address: userData.address,
+    username: userData.username,
+    totalScore: userData.totalScore,
+    breakdown: {
+      badgeScore: userData.breakdown.badgeScore,
+      socialScore: userData.breakdown.socialScore,
+      streakScore: userData.breakdown.streakScore,
+      chainScore: userData.breakdown.chainScore,
+      contributionScore: userData.breakdown.contributionScore,
+    },
+    rank: userData.rank,
+    badges: userData.badges,
+    socialAccounts: userData.socialAccounts,
+    streakDays: userData.streakDays,
+    lastUpdated: userData.lastUpdated,
+  };
+}
+
+// Usage
+const score = await fetchUserScore("0x...");
+console.log(score);`,
+
+    viem: `import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+import SCORE_FACET_ABI from "./ScoreFacet.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+const IPFS_GATEWAY_URL = "${IPFS_GATEWAY_URL}";
+
+async function fetchUserScore(walletAddress: \`0x\${string}\`) {
+  // 1. Create public client
+  const client = createPublicClient({
+    chain: sepolia,
+    transport: http(RPC_URL),
+  });
+
+  // 2. Get latest snapshot from contract
+  const [cid, root, id, timestamp] = await client.readContract({
+    address: PROXY_ADDRESS as \`0x\${string}\`,
+    abi: SCORE_FACET_ABI.abi,
+    functionName: "getLatestSnapshot",
+  });
+
+  if (!cid || cid.length === 0) {
+    throw new Error("No snapshot found");
+  }
+
+  // 3. Fetch snapshot data from IPFS
+  const normalizedCID = cid.startsWith("ipfs://")
+    ? cid.replace("ipfs://", "")
+    : cid;
+  const response = await fetch(\`\${IPFS_GATEWAY_URL}/\${normalizedCID}\`);
+  const snapshotData = await response.json();
+
+  // 4. Find user in snapshot
+  const normalizedAddress = walletAddress.toLowerCase();
+  const userData = snapshotData.users.find(
+    (u: any) => u.address.toLowerCase() === normalizedAddress
+  );
+
+  if (!userData) {
+    return null;
+  }
+
+  // 5. Return user score data
+  return {
+    address: userData.address,
+    username: userData.username,
+    totalScore: userData.totalScore,
+    breakdown: {
+      badgeScore: userData.breakdown.badgeScore,
+      socialScore: userData.breakdown.socialScore,
+      streakScore: userData.breakdown.streakScore,
+      chainScore: userData.breakdown.chainScore,
+      contributionScore: userData.breakdown.contributionScore,
+    },
+    rank: userData.rank,
+    badges: userData.badges,
+    socialAccounts: userData.socialAccounts,
+    streakDays: userData.streakDays,
+    lastUpdated: userData.lastUpdated,
+  };
+}
+
+// Usage
+const score = await fetchUserScore("0x...");
+console.log(score);`,
+
+    web3: `import Web3 from "web3";
+import SCORE_FACET_ABI from "./ScoreFacet.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+const IPFS_GATEWAY_URL = "${IPFS_GATEWAY_URL}";
+
+async function fetchUserScore(walletAddress: string) {
+  // 1. Create Web3 instance
+  const web3 = new Web3(RPC_URL);
+  const contract = new web3.eth.Contract(
+    SCORE_FACET_ABI.abi,
+    PROXY_ADDRESS
+  );
+
+  // 2. Get latest snapshot from contract
+  const result = await contract.methods.getLatestSnapshot().call();
+  const [cid, root, id, timestamp] = result;
+
+  if (!cid || cid.length === 0) {
+    throw new Error("No snapshot found");
+  }
+
+  // 3. Fetch snapshot data from IPFS
+  const normalizedCID = cid.startsWith("ipfs://")
+    ? cid.replace("ipfs://", "")
+    : cid;
+  const response = await fetch(\`\${IPFS_GATEWAY_URL}/\${normalizedCID}\`);
+  const snapshotData = await response.json();
+
+  // 4. Find user in snapshot
+  const normalizedAddress = walletAddress.toLowerCase();
+  const userData = snapshotData.users.find(
+    (u: any) => u.address.toLowerCase() === normalizedAddress
+  );
+
+  if (!userData) {
+    return null;
+  }
+
+  // 5. Return user score data
+  return {
+    address: userData.address,
+    username: userData.username,
+    totalScore: userData.totalScore,
+    breakdown: {
+      badgeScore: userData.breakdown.badgeScore,
+      socialScore: userData.breakdown.socialScore,
+      streakScore: userData.breakdown.streakScore,
+      chainScore: userData.breakdown.chainScore,
+      contributionScore: userData.breakdown.contributionScore,
+    },
+    rank: userData.rank,
+    badges: userData.badges,
+    socialAccounts: userData.socialAccounts,
+    streakDays: userData.streakDays,
+    lastUpdated: userData.lastUpdated,
+  };
+}
+
+// Usage
+const score = await fetchUserScore("0x...");
+console.log(score);`,
+  };
+
+  // Code examples for Fetch Badges
+  const badgesCode = {
+    ethers: `import { ethers } from "ethers";
+import BADGE_SYSTEM_ABI from "./BadgeSystem.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+const IPFS_GATEWAY_URL = "${IPFS_GATEWAY_URL}";
+
+async function fetchUserBadges(walletAddress: string) {
+  // 1. Create provider and connect to BadgeSystem
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+  const contract = new ethers.Contract(
+    PROXY_ADDRESS,
+    BADGE_SYSTEM_ABI.abi,
+    provider
+  );
+
+  // 2. Get user's badge token IDs
+  const tokenIds = await contract.getUserBadges(walletAddress);
+  const numericTokenIds = tokenIds.map((id: bigint) => Number(id));
+
+  if (numericTokenIds.length === 0) {
+    return [];
+  }
+
+  // 3. Fetch metadata for each badge
+  const badges = [];
+  for (const tokenId of numericTokenIds) {
+    // Get token URI (IPFS hash)
+    const tokenURI = await contract.tokenURI(tokenId);
+    const ipfsHash = tokenURI.replace("ipfs://", "");
+
+    // Fetch metadata from IPFS
+    const response = await fetch(\`\${IPFS_GATEWAY_URL}/\${ipfsHash}\`);
+    const metadata = await response.json();
+
+    // Get image URL
+    const imageHash = metadata.image.replace("ipfs://", "");
+    const imageUrl = \`\${IPFS_GATEWAY_URL}/\${imageHash}\`;
+
+    badges.push({
+      tokenId,
+      metadata,
+      imageUrl,
+    });
+  }
+
+  return badges;
+}
+
+// Usage
+const badges = await fetchUserBadges("0x...");
+console.log(badges);`,
+
+    viem: `import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+import BADGE_SYSTEM_ABI from "./BadgeSystem.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+const IPFS_GATEWAY_URL = "${IPFS_GATEWAY_URL}";
+
+async function fetchUserBadges(walletAddress: \`0x\${string}\`) {
+  // 1. Create public client
+  const client = createPublicClient({
+    chain: sepolia,
+    transport: http(RPC_URL),
+  });
+
+  // 2. Get user's badge token IDs
+  const tokenIds = await client.readContract({
+    address: PROXY_ADDRESS as \`0x\${string}\`,
+    abi: BADGE_SYSTEM_ABI.abi,
+    functionName: "getUserBadges",
+    args: [walletAddress],
+  });
+
+  const numericTokenIds = tokenIds.map((id: bigint) => Number(id));
+
+  if (numericTokenIds.length === 0) {
+    return [];
+  }
+
+  // 3. Fetch metadata for each badge
+  const badges = [];
+  for (const tokenId of numericTokenIds) {
+    // Get token URI (IPFS hash)
+    const tokenURI = await client.readContract({
+      address: PROXY_ADDRESS as \`0x\${string}\`,
+      abi: BADGE_SYSTEM_ABI.abi,
+      functionName: "tokenURI",
+      args: [BigInt(tokenId)],
+    });
+
+    const ipfsHash = tokenURI.replace("ipfs://", "");
+
+    // Fetch metadata from IPFS
+    const response = await fetch(\`\${IPFS_GATEWAY_URL}/\${ipfsHash}\`);
+    const metadata = await response.json();
+
+    // Get image URL
+    const imageHash = metadata.image.replace("ipfs://", "");
+    const imageUrl = \`\${IPFS_GATEWAY_URL}/\${imageHash}\`;
+
+    badges.push({
+      tokenId,
+      metadata,
+      imageUrl,
+    });
+  }
+
+  return badges;
+}
+
+// Usage
+const badges = await fetchUserBadges("0x...");
+console.log(badges);`,
+
+    web3: `import Web3 from "web3";
+import BADGE_SYSTEM_ABI from "./BadgeSystem.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+const IPFS_GATEWAY_URL = "${IPFS_GATEWAY_URL}";
+
+async function fetchUserBadges(walletAddress: string) {
+  // 1. Create Web3 instance
+  const web3 = new Web3(RPC_URL);
+  const contract = new web3.eth.Contract(
+    BADGE_SYSTEM_ABI.abi,
+    PROXY_ADDRESS
+  );
+
+  // 2. Get user's badge token IDs
+  const tokenIds = await contract.methods.getUserBadges(walletAddress).call();
+  const numericTokenIds = tokenIds.map((id: string) => Number(id));
+
+  if (numericTokenIds.length === 0) {
+    return [];
+  }
+
+  // 3. Fetch metadata for each badge
+  const badges = [];
+  for (const tokenId of numericTokenIds) {
+    // Get token URI (IPFS hash)
+    const tokenURI = await contract.methods.tokenURI(tokenId).call();
+    const ipfsHash = tokenURI.replace("ipfs://", "");
+
+    // Fetch metadata from IPFS
+    const response = await fetch(\`\${IPFS_GATEWAY_URL}/\${ipfsHash}\`);
+    const metadata = await response.json();
+
+    // Get image URL
+    const imageHash = metadata.image.replace("ipfs://", "");
+    const imageUrl = \`\${IPFS_GATEWAY_URL}/\${imageHash}\`;
+
+    badges.push({
+      tokenId,
+      metadata,
+      imageUrl,
+    });
+  }
+
+  return badges;
+}
+
+// Usage
+const badges = await fetchUserBadges("0x...");
+console.log(badges);`,
+  };
+
+  // Code examples for Fetch Social Accounts
+  const socialAccountsCode = {
+    ethers: `import { ethers } from "ethers";
+import DEID_PROFILE_ABI from "./DEiDProfile.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+
+async function fetchSocialAccounts(walletAddress: string) {
+  // 1. Create provider and connect to DEiDProfile
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+  const contract = new ethers.Contract(
+    PROXY_ADDRESS,
+    DEID_PROFILE_ABI.abi,
+    provider
+  );
+
+  // 2. Get social accounts
+  const [platforms, accountIds] = await contract.getSocialAccounts(walletAddress);
+
+  // 3. Map results to structured format
+  const socialAccounts = platforms.map((platform: string, index: number) => ({
+    platform: platform.toLowerCase(),
+    accountId: accountIds[index],
+  }));
+
+  return socialAccounts;
+}
+
+// Usage
+const accounts = await fetchSocialAccounts("0x...");
+console.log(accounts);
+// Output: [{ platform: "discord", accountId: "123456789" }, ...]`,
+
+    viem: `import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+import DEID_PROFILE_ABI from "./DEiDProfile.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+
+async function fetchSocialAccounts(walletAddress: \`0x\${string}\`) {
+  // 1. Create public client
+  const client = createPublicClient({
+    chain: sepolia,
+    transport: http(RPC_URL),
+  });
+
+  // 2. Get social accounts
+  const [platforms, accountIds] = await client.readContract({
+    address: PROXY_ADDRESS as \`0x\${string}\`,
+    abi: DEID_PROFILE_ABI.abi,
+    functionName: "getSocialAccounts",
+    args: [walletAddress],
+  });
+
+  // 3. Map results to structured format
+  const socialAccounts = platforms.map((platform: string, index: number) => ({
+    platform: platform.toLowerCase(),
+    accountId: accountIds[index],
+  }));
+
+  return socialAccounts;
+}
+
+// Usage
+const accounts = await fetchSocialAccounts("0x...");
+console.log(accounts);
+// Output: [{ platform: "discord", accountId: "123456789" }, ...]`,
+
+    web3: `import Web3 from "web3";
+import DEID_PROFILE_ABI from "./DEiDProfile.json";
+
+const PROXY_ADDRESS = "${PROXY_ADDRESS}";
+const RPC_URL = "${RPC_URL}";
+
+async function fetchSocialAccounts(walletAddress: string) {
+  // 1. Create Web3 instance
+  const web3 = new Web3(RPC_URL);
+  const contract = new web3.eth.Contract(
+    DEID_PROFILE_ABI.abi,
+    PROXY_ADDRESS
+  );
+
+  // 2. Get social accounts
+  const result = await contract.methods.getSocialAccounts(walletAddress).call();
+  const [platforms, accountIds] = result;
+
+  // 3. Map results to structured format
+  const socialAccounts = platforms.map((platform: string, index: number) => ({
+    platform: platform.toLowerCase(),
+    accountId: accountIds[index],
+  }));
+
+  return socialAccounts;
+}
+
+// Usage
+const accounts = await fetchSocialAccounts("0x...");
+console.log(accounts);
+// Output: [{ platform: "discord", accountId: "123456789" }, ...]`,
   };
 
   return (
@@ -121,471 +669,372 @@ const mintResponse = await fetch('/api/v1/badge/mint', {
             <div>
               <h1 className="text-3xl font-bold">Developer Portal</h1>
               <p className="text-muted-foreground mt-2">
-                API documentation and developer resources for DEiD platform
+                On-chain data fetching tutorials for DEiD platform
               </p>
             </div>
           </div>
+
+          {/* Library Selector */}
+          <div className="mb-6">
+            <LibrarySelector value={library} onChange={setLibrary} />
+          </div>
         </div>
 
-        <div className="grid gap-6">
-          {/* Status Banner */}
-          <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                <div>
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                    Developer API - Coming Soon
-                  </h3>
-                  <p className="text-blue-700 dark:text-blue-300 text-sm">
-                    We're building a comprehensive API for developers. Stay
-                    tuned for updates!
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="score">Trust Score</TabsTrigger>
+            <TabsTrigger value="badges">Badges</TabsTrigger>
+            <TabsTrigger value="social">Social Accounts</TabsTrigger>
+          </TabsList>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Database className="w-8 h-8 text-primary" />
-                  <div>
-                    <p className="text-2xl font-bold">12</p>
-                    <p className="text-sm text-muted-foreground">
-                      API Endpoints
-                    </p>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5" />
+                  Introduction
+                </CardTitle>
+                <CardDescription>
+                  Learn how to fetch on-chain data from DEiD smart contracts
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>
+                  DEiD uses a Diamond Proxy pattern where all facets
+                  (DEiDProfile, ScoreFacet, BadgeSystem) are accessible through
+                  a single proxy address. This tutorial shows you how to fetch
+                  user data directly from the blockchain.
+                </p>
+
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  <h4 className="font-semibold">Contract Configuration</h4>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <strong>Proxy Address:</strong>
+                      <code className="ml-2 bg-background px-2 py-1 rounded">
+                        {PROXY_ADDRESS}
+                      </code>
+                    </div>
+                    <div>
+                      <strong>Network:</strong> <span>{NETWORK}</span>
+                    </div>
+                    <div>
+                      <strong>IPFS Gateway:</strong>{" "}
+                      <code className="bg-background px-2 py-1 rounded">
+                        {IPFS_GATEWAY_URL}
+                      </code>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Users className="w-8 h-8 text-primary" />
-                  <div>
-                    <p className="text-2xl font-bold">1,200</p>
-                    <p className="text-sm text-muted-foreground">
-                      Active Developers
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Zap className="w-8 h-8 text-primary" />
-                  <div>
-                    <p className="text-2xl font-bold">99.9%</p>
-                    <p className="text-sm text-muted-foreground">Uptime</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-8 h-8 text-primary" />
-                  <div>
-                    <p
-                      className={`text-2xl font-bold transition-all duration-200 ${
-                        isUpdating
-                          ? "text-blue-500 animate-pulse"
-                          : "text-foreground"
-                      }`}
-                    >
-                      {avgResponse}ms
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Avg Response
-                      {isUpdating && (
-                        <span className="ml-2 text-blue-500 text-xs animate-pulse">
-                          Updating...
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Main Content Tabs */}
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="authentication">Auth</TabsTrigger>
-              <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
-              <TabsTrigger value="examples">Examples</TabsTrigger>
-              <TabsTrigger value="support">Support</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5" />
-                    API Overview
-                  </CardTitle>
-                  <CardDescription>
-                    Comprehensive REST API for DEiD platform integration
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p>
-                    The DEiD API provides developers with powerful tools to
-                    integrate decentralized identity functionality into their
-                    applications. Build on top of blockchain technology with our
-                    easy-to-use REST endpoints.
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Core Features</h4>
-                      <ul className="list-disc pl-6 space-y-1 text-sm">
-                        <li>User authentication & profile management</li>
-                        <li>NFT badge minting & verification</li>
-                        <li>Blockchain transaction handling</li>
-                        <li>IPFS metadata storage</li>
-                        <li>Social account verification</li>
-                        <li>Trust scoring algorithms</li>
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Prerequisites</h4>
+                  <ul className="list-disc pl-6 space-y-1 text-sm">
+                    <li>Node.js 18+ installed</li>
+                    <li>
+                      Install your preferred library:
+                      <ul className="list-disc pl-6 mt-1">
+                        <li>
+                          <code>npm install ethers</code> (ethers.js v6)
+                        </li>
+                        <li>
+                          <code>npm install viem</code> (viem v1)
+                        </li>
+                        <li>
+                          <code>npm install web3</code> (web3.js v4)
+                        </li>
                       </ul>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Technical Specs</h4>
-                      <ul className="list-disc pl-6 space-y-1 text-sm">
-                        <li>RESTful API design</li>
-                        <li>JSON request/response format</li>
-                        <li>JWT-based authentication</li>
-                        <li>Rate limiting & throttling</li>
-                        <li>Comprehensive error handling</li>
-                        <li>Webhook support (coming soon)</li>
-                      </ul>
+                    </li>
+                    <li>RPC endpoint (Infura, Alchemy, or public RPC)</li>
+                    <li>Contract ABIs (available in this repository)</li>
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                        Important
+                      </h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        All DEiD facets (DEiDProfile, ScoreFacet, BadgeSystem)
+                        are accessed through the same proxy address:{" "}
+                        <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">
+                          {PROXY_ADDRESS}
+                        </code>
+                        . Use the appropriate ABI for each contract function you
+                        want to call.
+                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Getting Started</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        1
-                      </Badge>
-                      <div>
-                        <h4 className="font-semibold">
-                          Register for API Access
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Sign up for a developer account and get your API keys
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        2
-                      </Badge>
-                      <div>
-                        <h4 className="font-semibold">
-                          Authenticate Your Requests
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Use JWT tokens to authenticate API calls
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        3
-                      </Badge>
-                      <div>
-                        <h4 className="font-semibold">Start Building</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Integrate our endpoints into your application
-                        </p>
-                      </div>
-                    </div>
+          {/* Fetch User Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fetch User Profile</CardTitle>
+                <CardDescription>
+                  Get user profile data from DEiDProfile contract
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Overview</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Fetch basic profile information including username,
+                      metadata URI, linked wallets, and social accounts. The
+                      metadata URI points to IPFS where additional profile
+                      details are stored.
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            <TabsContent value="authentication" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Key className="w-5 h-5" />
-                    Authentication
-                  </CardTitle>
-                  <CardDescription>
-                    Secure your API requests with JWT authentication
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p>
-                    All API requests require authentication using JWT tokens.
-                    Tokens are obtained through wallet-based authentication.
-                  </p>
-
-                  <div className="bg-muted p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">Authentication Flow</h4>
+                  <div>
+                    <h4 className="font-semibold mb-2">Steps</h4>
                     <ol className="list-decimal pl-6 space-y-2 text-sm">
-                      <li>User connects wallet to your application</li>
-                      <li>Generate a signature challenge</li>
-                      <li>User signs the challenge with their wallet</li>
-                      <li>Submit signature to our auth endpoint</li>
-                      <li>Receive JWT token for API access</li>
+                      <li>Connect to the DEiDProfile contract via proxy</li>
+                      <li>
+                        Call <code>getProfile(walletAddress)</code>
+                      </li>
+                      <li>Parse the returned profile data</li>
+                      <li>
+                        Optionally fetch metadata from IPFS using metadataURI
+                      </li>
                     </ol>
                   </div>
 
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">Request Headers</h4>
-                    <div className="bg-muted p-4 rounded-lg font-mono text-sm">
-                      Authorization: Bearer {"{your-jwt-token}"}
-                    </div>
+                  <CodeExample
+                    ethers={profileCode.ethers}
+                    viem={profileCode.viem}
+                    web3={profileCode.web3}
+                    library={library}
+                    title="Complete Example"
+                  />
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Response Structure</h4>
+                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                      <code>{`interface OnChainProfile {
+  username: string;
+  metadataURI: string;
+  wallets: string[];
+  socialAccounts: string[];
+  createdAt: number;
+  lastUpdated: number;
+  isActive: boolean;
+}`}</code>
+                    </pre>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            <TabsContent value="endpoints" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>API Endpoints</CardTitle>
-                  <CardDescription>
-                    Complete list of available API endpoints
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary">POST</Badge>
-                        <code className="text-sm">/api/v1/auth/login</code>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Authenticate user with wallet signature
-                      </p>
-                    </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary">GET</Badge>
-                        <code className="text-sm">/api/v1/profile/me</code>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Get current user profile information
-                      </p>
-                    </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary">POST</Badge>
-                        <code className="text-sm">/api/v1/badge/mint</code>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Mint a new NFT badge for user
-                      </p>
-                    </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary">GET</Badge>
-                        <code className="text-sm">/api/v1/nft/owned</code>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Get user's owned NFT badges
-                      </p>
-                    </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary">POST</Badge>
-                        <code className="text-sm">/api/v1/ipfs/upload</code>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Upload metadata to IPFS
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="examples" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Terminal className="w-5 h-5" />
-                    Code Examples
-                  </CardTitle>
-                  <CardDescription>
-                    Practical examples for common API operations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">Authentication</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(codeExamples.auth, "auth")
-                          }
-                        >
-                          {copiedCode === "auth" ? (
-                            <Check className="w-4 h-4" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                        <code>{codeExamples.auth}</code>
-                      </pre>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">Get User Profile</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(codeExamples.profile, "profile")
-                          }
-                        >
-                          {copiedCode === "profile" ? (
-                            <Check className="w-4 h-4" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                        <code>{codeExamples.profile}</code>
-                      </pre>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">Mint NFT Badge</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(codeExamples.nft, "nft")
-                          }
-                        >
-                          {copiedCode === "nft" ? (
-                            <Check className="w-4 h-4" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                        <code>{codeExamples.nft}</code>
-                      </pre>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="support" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="w-5 h-5" />
-                    Developer Support
-                  </CardTitle>
-                  <CardDescription>
-                    Get help with API integration and development
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Documentation</h4>
-                      <ul className="space-y-1 text-sm">
-                        <li>• Complete API reference</li>
-                        <li>• Integration guides</li>
-                        <li>• Best practices</li>
-                        <li>• SDK documentation</li>
-                      </ul>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Support Channels</h4>
-                      <ul className="space-y-1 text-sm">
-                        <li>• Email: dev-support@deid.network</li>
-                        <li>• Discord: DEiD Developers</li>
-                        <li>• GitHub: Issues & Discussions</li>
-                        <li>• Stack Overflow: #deid-api</li>
-                      </ul>
-                    </div>
+          {/* Fetch Trust Score Tab */}
+          <TabsContent value="score" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fetch Trust Score</CardTitle>
+                <CardDescription>
+                  Get user trust score from ScoreFacet contract and IPFS
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Overview</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Trust scores are stored in IPFS snapshots. First, get the
+                      latest snapshot CID from the ScoreFacet contract, then
+                      fetch the snapshot data from IPFS and find the user's
+                      score data.
+                    </p>
                   </div>
 
-                  <div className="bg-muted p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">Rate Limits</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <strong>Free Tier:</strong>
-                        <br />
-                        1,000 requests/day
-                      </div>
-                      <div>
-                        <strong>Pro Tier:</strong>
-                        <br />
-                        10,000 requests/day
-                      </div>
-                      <div>
-                        <strong>Enterprise:</strong>
-                        <br />
-                        Custom limits
-                      </div>
-                    </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Steps</h4>
+                    <ol className="list-decimal pl-6 space-y-2 text-sm">
+                      <li>Connect to ScoreFacet contract via proxy</li>
+                      <li>
+                        Call <code>getLatestSnapshot()</code> to get CID
+                      </li>
+                      <li>Fetch snapshot data from IPFS gateway</li>
+                      <li>Find user in snapshot by wallet address</li>
+                      <li>Parse score breakdown and related data</li>
+                    </ol>
                   </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Developer Support</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4">
-                    <Button asChild>
-                      <a href="mailto:dev-support@deid.network">
-                        <Shield className="w-4 h-4 mr-2" />
-                        Email Support
-                      </a>
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <a
-                        href="https://discord.gg/deid"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Join Discord
-                      </a>
-                    </Button>
+                  <CodeExample
+                    ethers={scoreCode.ethers}
+                    viem={scoreCode.viem}
+                    web3={scoreCode.web3}
+                    library={library}
+                    title="Complete Example"
+                  />
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Response Structure</h4>
+                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                      <code>{`interface UserScoreData {
+  address: string;
+  username: string;
+  totalScore: number;
+  breakdown: {
+    badgeScore: number;
+    socialScore: number;
+    streakScore: number;
+    chainScore: number;
+    contributionScore: number;
+  };
+  rank: number;
+  badges: Array<{ tokenId: number; ... }>;
+  socialAccounts: Array<{ platform: string; accountId: string }>;
+  streakDays: number;
+  lastUpdated: number;
+}`}</code>
+                    </pre>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Fetch Badges Tab */}
+          <TabsContent value="badges" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fetch User Badges</CardTitle>
+                <CardDescription>
+                  Get user badges from BadgeSystem contract and IPFS
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Overview</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Badges are ERC-721 NFTs. Get the user's badge token IDs,
+                      then fetch metadata and images from IPFS for each badge.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Steps</h4>
+                    <ol className="list-decimal pl-6 space-y-2 text-sm">
+                      <li>Connect to BadgeSystem contract via proxy</li>
+                      <li>
+                        Call <code>getUserBadges(walletAddress)</code> to get
+                        token IDs
+                      </li>
+                      <li>
+                        For each token ID, call <code>tokenURI(tokenId)</code>{" "}
+                        to get IPFS hash
+                      </li>
+                      <li>Fetch badge metadata from IPFS</li>
+                      <li>Construct image URL from metadata</li>
+                    </ol>
+                  </div>
+
+                  <CodeExample
+                    ethers={badgesCode.ethers}
+                    viem={badgesCode.viem}
+                    web3={badgesCode.web3}
+                    library={library}
+                    title="Complete Example"
+                  />
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Response Structure</h4>
+                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                      <code>{`interface UserBadge {
+  tokenId: number;
+  metadata: {
+    name: string;
+    description: string;
+    image: string;
+    attributes: Array<{
+      trait_type: string;
+      value: string | number;
+    }>;
+  };
+  imageUrl: string;
+}`}</code>
+                    </pre>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Fetch Social Accounts Tab */}
+          <TabsContent value="social" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fetch Social Accounts</CardTitle>
+                <CardDescription>
+                  Get linked social accounts from DEiDProfile contract
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Overview</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Get all social accounts (Discord, GitHub, Google,
+                      Facebook, etc.) linked to a user's wallet address.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Steps</h4>
+                    <ol className="list-decimal pl-6 space-y-2 text-sm">
+                      <li>Connect to DEiDProfile contract via proxy</li>
+                      <li>
+                        Call <code>getSocialAccounts(walletAddress)</code>
+                      </li>
+                      <li>
+                        Map platforms and accountIds arrays to structured format
+                      </li>
+                    </ol>
+                  </div>
+
+                  <CodeExample
+                    ethers={socialAccountsCode.ethers}
+                    viem={socialAccountsCode.viem}
+                    web3={socialAccountsCode.web3}
+                    library={library}
+                    title="Complete Example"
+                  />
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Response Structure</h4>
+                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                      <code>{`interface SocialAccount {
+  platform: string;  // "discord", "github", "google", "facebook", etc.
+  accountId: string;  // Platform-specific user ID
+}
+
+// Example output:
+[
+  { platform: "discord", accountId: "123456789" },
+  { platform: "github", accountId: "username" },
+  { platform: "google", accountId: "user@gmail.com" }
+]`}</code>
+                    </pre>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
