@@ -1,6 +1,27 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Explicitly use webpack (not Turbopack) for production builds
+  // Turbopack doesn't support native modules like @tailwindcss/oxide
+  turbopack: {},
+  webpack: (config, { webpack }) => {
+    // Ignore test files and directories in node_modules
+    config.plugins = config.plugins || [];
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^\.\/test$/,
+        contextRegExp: /node_modules\/thread-stream$/,
+      })
+    );
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /\.(test|spec)\.(js|ts|mjs)$/,
+        contextRegExp: /node_modules/,
+      })
+    );
+
+    return config;
+  },
   images: {
     remotePatterns: [
       {
