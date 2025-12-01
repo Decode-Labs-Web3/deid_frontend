@@ -35,7 +35,7 @@ export const ProfileCard = ({
         const gateways = [
           `${
             process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-            "http://35.247.142.76:8080/ipfs"
+            "http://34.143.255.129:8080/ipfs"
           }/${avatar_ipfs_hash}`,
           `https://ipfs.io/ipfs/${avatar_ipfs_hash}`,
           `https://gateway.pinata.cloud/ipfs/${avatar_ipfs_hash}`,

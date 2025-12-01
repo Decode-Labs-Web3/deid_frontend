@@ -46,7 +46,7 @@ export const SearchResultCard = ({
           const gateways = [
             `${
               process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-              "http://35.247.142.76:8080/ipfs"
+              "http://34.143.255.129:8080/ipfs"
             }/${avatarIpfsHash}`,
             `https://ipfs.io/ipfs/${avatarIpfsHash}`,
             `https://gateway.pinata.cloud/ipfs/${avatarIpfsHash}`,

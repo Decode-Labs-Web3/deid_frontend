@@ -11,7 +11,7 @@
 export async function uploadToIPFS(jsonData: any): Promise<string> {
   const postUrl =
     process.env.NEXT_IPFS_GATEWAY_URL_POST ||
-    "http://35.247.142.76:5001/api/v0/add";
+    "http://34.143.255.129:5001/api/v0/add";
 
   console.log("📤 Uploading data to IPFS:", postUrl);
 
@@ -56,7 +56,7 @@ export async function fetchFromIPFS(cid: string): Promise<any> {
     // Primary gateway from environment
     process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL
       ? `${process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL}/${cid}`
-      : `http://35.247.142.76:8080/ipfs/${cid}`,
+      : `http://34.143.255.129:8080/ipfs/${cid}`,
     // Public fallback gateways
     `https://ipfs.io/ipfs/${cid}`,
     `https://gateway.pinata.cloud/ipfs/${cid}`,
@@ -101,7 +101,7 @@ export async function fetchFromIPFS(cid: string): Promise<any> {
 export async function pinCID(cid: string): Promise<void> {
   const pinUrl =
     process.env.NEXT_IPFS_GATEWAY_URL_POST?.replace("/add", "/pin/add") ||
-    "http://35.247.142.76:5001/api/v0/pin/add";
+    "http://34.143.255.129:5001/api/v0/pin/add";
 
   console.log(`📌 Pinning CID: ${cid}`);
 

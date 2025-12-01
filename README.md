@@ -85,8 +85,8 @@ NEXT_PUBLIC_TESTNET_RPC_URL=https://eth-sepolia.public.blastapi.io
 NEXT_PUBLIC_CHAIN_ID=11155111
 
 # IPFS Configuration
-NEXT_PUBLIC_IPFS_GATEWAY_URL=http://35.247.142.76:8080/ipfs
-NEXT_IPFS_GATEWAY_URL_POST=http://35.247.142.76:5001/api/v0/add
+NEXT_PUBLIC_IPFS_GATEWAY_URL=http://34.143.255.129:8080/ipfs
+NEXT_IPFS_GATEWAY_URL_POST=http://34.143.255.129:5001/api/v0/add
 
 # Validator Configuration (Server-side only)
 VALIDATOR_PRIVATE_KEY=0xYourValidatorPrivateKey

@@ -153,7 +153,7 @@ export function Leaderboard({
             if (meta?.avatar_ipfs_hash) {
               const base =
                 process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-                "http://35.247.142.76:8080/ipfs";
+                "http://34.143.255.129:8080/ipfs";
               return `${base}/${meta.avatar_ipfs_hash}`;
             }
             // No fallback to badge images - use undefined to show initials

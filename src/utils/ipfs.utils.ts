@@ -1,7 +1,7 @@
 // IPFS utilities for fetching profile metadata
 //
 // Environment Variables:
-// - NEXT_PUBLIC_IPFS_GATEWAY_URL: Primary IPFS gateway URL (default: http://35.247.142.76:8080/ipfs)
+// - NEXT_PUBLIC_IPFS_GATEWAY_URL: Primary IPFS gateway URL (default: http://34.143.255.129:8080/ipfs)
 //
 import { ProfileMetadata } from "./onchain.utils";
 
@@ -32,7 +32,7 @@ export const fetchProfileMetadataFromIPFS = async (
       // Primary gateway from environment or fallback
       `${
         process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-        "http://35.247.142.76:8080/ipfs"
+        "http://34.143.255.129:8080/ipfs"
       }/${cleanHash}`,
       // Public gateways as fallbacks
       `https://ipfs.io/ipfs/${cleanHash}`,
@@ -165,7 +165,7 @@ export const convertIPFSUrlToHttp = (ipfsUrl: string): string => {
   // Use primary gateway or fallback to public gateway
   const primaryGateway =
     process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-    "http://35.247.142.76:8080/ipfs";
+    "http://34.143.255.129:8080/ipfs";
   return `${primaryGateway}/${cleanHash}`;
 };
 
@@ -184,7 +184,7 @@ export const fetchAvatarFromIPFS = async (
     const gateways = [
       `${
         process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-        "http://35.247.142.76:8080/ipfs"
+        "http://34.143.255.129:8080/ipfs"
       }/${cleanHash}`,
       `https://ipfs.io/ipfs/${cleanHash}`,
       `https://gateway.pinata.cloud/ipfs/${cleanHash}`,

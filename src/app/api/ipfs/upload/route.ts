@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Get IPFS gateway URL from environment or use default
     const ipfsGateway =
       process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL_POST ||
-      "http://35.247.142.76:5001/api/v0/add";
+      "http://34.143.255.129:5001/api/v0/add";
 
     console.log("🌐 Uploading to IPFS gateway:", ipfsGateway);
 

@@ -67,7 +67,7 @@ jobs:
           # Set minimal env vars for build (build should work without full config)
           NEXT_PUBLIC_DEID_AUTH_BACKEND: ${{ secrets.NEXT_PUBLIC_DEID_AUTH_BACKEND || 'http://localhost:8000' }}
           NEXT_PUBLIC_PROXY_ADDRESS: ${{ secrets.NEXT_PUBLIC_PROXY_ADDRESS || '0x76050bee51946D027B5548d97C6166e08e5a2B1C' }}
-          NEXT_PUBLIC_IPFS_GATEWAY_URL: ${{ secrets.NEXT_PUBLIC_IPFS_GATEWAY_URL || 'http://35.247.142.76:8080/ipfs' }}
+          NEXT_PUBLIC_IPFS_GATEWAY_URL: ${{ secrets.NEXT_PUBLIC_IPFS_GATEWAY_URL || 'http://34.143.255.129:8080/ipfs' }}
 
   deploy:
     needs: [test]

@@ -74,7 +74,7 @@ export const getIPFSGateways = (): string[] => {
   const gateways = [
     // Primary gateway (custom)
     process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
-      "http://35.247.142.76:8080/ipfs",
+      "http://34.143.255.129:8080/ipfs",
     // Public gateways (reliable and fast)
     "https://ipfs.io/ipfs",
     "https://gateway.pinata.cloud/ipfs",

@@ -18,8 +18,8 @@ NEXT_PUBLIC_PROXY_ADDRESS=0xfcd6b7875C34c02846F55408038CbC35bC5A0BEF
 NEXT_PUBLIC_TESTNET_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
 
 # IPFS Node
-NEXT_PUBLIC_IPFS_GATEWAY_URL=http://35.247.142.76:8080/ipfs
-NEXT_IPFS_GATEWAY_URL_POST=http://35.247.142.76:5001/api/v0/add
+NEXT_PUBLIC_IPFS_GATEWAY_URL=http://34.143.255.129:8080/ipfs
+NEXT_IPFS_GATEWAY_URL_POST=http://34.143.255.129:5001/api/v0/add
 
 # Validator (KEEP SECRET!)
 VALIDATOR_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
@@ -143,7 +143,7 @@ Add:
 ### 1. Test IPFS Upload
 
 ```bash
-curl -F file=@test.json http://35.247.142.76:5001/api/v0/add
+curl -F file=@test.json http://34.143.255.129:5001/api/v0/add
 ```
 
 Should return CID.
@@ -151,7 +151,7 @@ Should return CID.
 ### 2. Test IPFS Fetch
 
 ```bash
-curl http://35.247.142.76:8080/ipfs/YOUR_CID
+curl http://34.143.255.129:8080/ipfs/YOUR_CID
 ```
 
 Should return JSON content.

@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "http",
-        hostname: "35.247.142.76",
+        hostname: "34.143.255.129",
         port: "8080",
         pathname: "/ipfs/**",
       },
